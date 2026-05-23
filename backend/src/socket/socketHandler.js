@@ -18,87 +18,138 @@ const socketHandler = (io) => {
   });
 
   io.on("connection", (socket) => {
+    console.log(`✓ User connected: ${socket.userId}`);
+
     // Join personal room (for direct notifications)
     socket.join(`user:${socket.userId}`);
 
-    // Join a conversation room
+    // =============================================
+    // 💬 CONVERSATION ROOMS
+    // =============================================
     socket.on("join_conversation", (conversationId) => {
       socket.join(`conv:${conversationId}`);
+      console.log(`✓ User ${socket.userId} joined conversation ${conversationId}`);
     });
 
-    // Leave a conversation room
     socket.on("leave_conversation", (conversationId) => {
       socket.leave(`conv:${conversationId}`);
     });
 
-    // Send a message
-    socket.on("send_message", async ({ conversationId, text, type = "text" }, callback) => {
+    // =============================================
+    // 📤 SEND MESSAGE
+    // =============================================
+    socket.on("send_message", async ({ conversationId, text }, callback) => {
       try {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return callback?.({ error: "Conversation not found" });
 
-        const isParticipant = conversation.participants.some(
-          (p) => p.toString() === socket.userId
-        );
-        if (!isParticipant) return callback?.({ error: "Not authorized" });
+        // Check if user is participant
+        const isBuyer = socket.userId.toString() === conversation.buyer.toString();
+        const isSeller = socket.userId.toString() === conversation.seller.toString();
+        if (!isBuyer && !isSeller) return callback?.({ error: "Not authorized" });
 
+        // Create message
         const message = await Message.create({
           conversation: conversationId,
           sender: socket.userId,
-          text,
-          type,
-          readBy: [socket.userId],
+          text: text || "",
+          messageType: "text",
         });
 
-        const populated = await message.populate("sender", "name avatar role");
+        const populated = await message.populate("sender", "name avatar");
 
         // Update conversation
-        const otherParticipants = conversation.participants.filter(
-          (p) => p.toString() !== socket.userId
-        );
-        const unreadInc = {};
-        otherParticipants.forEach((p) => { unreadInc[`unreadCount.${p}`] = 1; });
-        await Conversation.findByIdAndUpdate(conversationId, {
-          lastMessage: text,
-          lastMessageAt: new Date(),
-          $inc: unreadInc,
+        const updateData = {
+          lastMessage: text?.substring(0, 100),
+          lastMessageTime: new Date(),
+          lastMessageBy: socket.userId,
+          messageCount: conversation.messageCount + 1,
+        };
+
+        if (isBuyer) {
+          updateData.sellerUnreadCount = (conversation.sellerUnreadCount || 0) + 1;
+        } else {
+          updateData.buyerUnreadCount = (conversation.buyerUnreadCount || 0) + 1;
+        }
+
+        await Conversation.findByIdAndUpdate(conversationId, updateData);
+
+        // Broadcast message to conversation room
+        io.to(`conv:${conversationId}`).emit("message:new", {
+          message: populated,
+          conversationId,
         });
 
-        // Emit to all in conversation room
-        io.to(`conv:${conversationId}`).emit("new_message", populated);
-
-        // Notify other participants in their personal rooms
-        otherParticipants.forEach((p) => {
-          io.to(`user:${p}`).emit("conversation_updated", {
-            conversationId,
-            lastMessage: text,
-            lastMessageAt: new Date(),
-          });
+        // Notify other participant
+        const otherUserId = isBuyer ? conversation.seller : conversation.buyer;
+        io.to(`user:${otherUserId}`).emit("conversation:updated", {
+          conversationId,
+          lastMessage: text?.substring(0, 100),
+          lastMessageTime: new Date(),
         });
 
         callback?.({ success: true, message: populated });
+      } catch (err) {
+        console.error("Message error:", err);
+        callback?.({ error: err.message });
+      }
+    });
+
+    // =============================================
+    // ✅ MARK MESSAGES AS READ
+    // =============================================
+    socket.on("messages:read", async ({ conversationId }, callback) => {
+      try {
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return;
+
+        const isBuyer = socket.userId.toString() === conversation.buyer.toString();
+        const readField = isBuyer ? "buyerReadAt" : "sellerReadAt";
+        const unreadField = isBuyer ? "buyerUnreadCount" : "sellerUnreadCount";
+
+        await Message.updateMany(
+          { conversation: conversationId, sender: { $ne: socket.userId }, isRead: false },
+          { isRead: true, readAt: new Date() }
+        );
+
+        await Conversation.findByIdAndUpdate(conversationId, {
+          [readField]: new Date(),
+          [unreadField]: 0,
+        });
+
+        io.to(`conv:${conversationId}`).emit("messages:read", {
+          conversationId,
+          userId: socket.userId,
+        });
+
+        callback?.({ success: true });
       } catch (err) {
         callback?.({ error: err.message });
       }
     });
 
-    // Typing indicator
+    // =============================================
+    // ✏️ TYPING INDICATOR
+    // =============================================
     socket.on("typing", ({ conversationId }) => {
-      socket.to(`conv:${conversationId}`).emit("user_typing", {
+      socket.to(`conv:${conversationId}`).emit("user:typing", {
         userId: socket.userId,
         conversationId,
       });
     });
 
     socket.on("stop_typing", ({ conversationId }) => {
-      socket.to(`conv:${conversationId}`).emit("user_stop_typing", {
+      socket.to(`conv:${conversationId}`).emit("user:stop_typing", {
         userId: socket.userId,
         conversationId,
       });
     });
 
+    // =============================================
+    // 🔌 DISCONNECT
+    // =============================================
     socket.on("disconnect", () => {
-      // cleanup handled by socket.io automatically
+      console.log(`✗ User disconnected: ${socket.userId}`);
     });
   });
 };

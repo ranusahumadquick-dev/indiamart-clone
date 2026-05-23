@@ -24,6 +24,7 @@ import questionRoutes from "./routes/questionRoutes.js";
 import priceAlertRoutes from "./routes/priceAlertRoutes.js";
 import sourcingRoutes from "./routes/sourcingRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 // =============================================
 // Middleware Imports
@@ -102,6 +103,7 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/price-alerts", priceAlertRoutes);
 app.use("/api/sourcing-requests", sourcingRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/chat", chatRoutes);
 
 // =============================================
 // 404 HANDLER — Route not found

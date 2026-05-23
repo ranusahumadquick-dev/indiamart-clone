@@ -685,3 +685,119 @@ export const getTrustScore = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get Seller Quota Status
+ * GET /api/sellers/me/quota-status
+ * Auth: Required (Seller only)
+ * Returns: Current usage vs limits for products, daily inquiries, featured listings
+ */
+export const getSellerQuotaStatus = asyncHandler(async (req, res) => {
+  const { default: Subscription } = await import("../models/Subscription.js");
+  const { default: SubscriptionPlan } = await import("../models/SubscriptionPlan.js");
+
+  const sellerId = req.user._id;
+
+  // Get active subscription or default to Free plan
+  let subscription = await Subscription.findOne({
+    userId: sellerId,
+    planFor: "seller",
+    status: "active"
+  }).populate("plan");
+
+  let plan = null;
+  let subscriptionData = null;
+
+  if (subscription && !subscription.isExpired) {
+    plan = subscription.plan;
+    subscriptionData = {
+      name: subscription.name,
+      startDate: subscription.startDate,
+      endDate: subscription.endDate,
+      daysRemaining: subscription.daysRemaining,
+    };
+  } else {
+    // Default to Free Plan
+    plan = await SubscriptionPlan.findOne({ name: "Free Plan" });
+    if (!plan) {
+      throw new ApiError(500, "Default Free Plan not found");
+    }
+  }
+
+  const limits = plan.limits;
+
+  // Count current products
+  const productCount = await Product.countDocuments({
+    seller: sellerId,
+    isActive: true,
+  });
+
+  // Count featured listings
+  const featuredCount = await Product.countDocuments({
+    seller: sellerId,
+    isFeatured: true,
+    isActive: true,
+  });
+
+  // Count inquiries sent today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const inquiriesCount = await Inquiry.countDocuments({
+    seller: sellerId,
+    createdAt: { $gte: todayStart, $lte: todayEnd },
+  });
+
+  // Helper function to calculate percentage and status
+  const calculateQuota = (used, limit) => {
+    if (limit === -1) {
+      // Unlimited
+      return {
+        used,
+        limit: "∞",
+        percentage: 0,
+        isUnlimited: true,
+        status: "ok",
+      };
+    }
+
+    const percentage = Math.round((used / limit) * 100);
+    let status = "ok";
+    if (percentage >= 90) status = "critical";
+    else if (percentage >= 70) status = "warning";
+
+    return {
+      used,
+      limit,
+      percentage,
+      isUnlimited: false,
+      status,
+    };
+  };
+
+  const quotaStatus = {
+    subscription: subscriptionData,
+    quotas: {
+      products: calculateQuota(productCount, limits.maxProducts),
+      inquiriesPerDay: calculateQuota(inquiriesCount, limits.maxInquiriesPerDay),
+      featuredListings: calculateQuota(
+        featuredCount,
+        limits.featuredListings || 0
+      ),
+    },
+    features: {
+      prioritySupport: limits.prioritySupport || false,
+      analytics: limits.analytics || false,
+    },
+  };
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      quotaStatus,
+      "Seller quota status retrieved successfully"
+    )
+  );
+});
+

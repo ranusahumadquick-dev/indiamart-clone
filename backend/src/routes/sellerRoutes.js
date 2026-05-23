@@ -19,6 +19,7 @@ import {
   toggleWhatsappVisibility,
   updateRequirementAlerts,
   getTrustScore,
+  getSellerQuotaStatus,
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
@@ -37,6 +38,9 @@ router.get("/analytics", authMiddleware, roleMiddleware(["seller"]), getSellerAn
 
 // GET - Get own seller profile with completeness score
 router.get("/me", authMiddleware, roleMiddleware(["seller"]), getMySellerProfile);
+
+// GET - Get seller's quota status (products, inquiries, featured listings)
+router.get("/me/quota-status", authMiddleware, roleMiddleware(["seller"]), getSellerQuotaStatus);
 
 // PUT - Update own seller profile
 router.put("/me", authMiddleware, roleMiddleware(["seller"]), updateMySellerProfile);

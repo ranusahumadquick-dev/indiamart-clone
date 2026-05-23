@@ -62,6 +62,9 @@ const productSchema = new mongoose.Schema(
       {
         url: { type: String, required: true },
         publicId: { type: String }, // Cloudinary public ID for deletion
+        alt: { type: String }, // Alt text for accessibility
+        type: { type: String, enum: ['image', 'video'], default: 'image' }, // image or video
+        videoThumbnail: { type: String }, // Thumbnail URL for video
       },
     ],
 

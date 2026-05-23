@@ -7,6 +7,9 @@ import {
   changePassword,
   getNotificationPreferences,
   updateNotificationPreferences,
+  deactivateAccount,
+  reactivateAccount,
+  deleteAccountPermanently,
 } from "../controllers/authController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import { uploadAvatar } from "../middleware/uploadMiddleware.js";
@@ -36,5 +39,10 @@ router.put("/update-avatar", authMiddleware, uploadAvatar, async (req, res) => {
   ).select("-password -refreshToken");
   return res.status(200).json(new ApiResponse(200, user, "Avatar updated"));
 });
+
+// Account Management Routes
+router.post("/deactivate-account", authMiddleware, deactivateAccount);
+router.post("/reactivate-account", authMiddleware, reactivateAccount);
+router.post("/delete-account", authMiddleware, deleteAccountPermanently);
 
 export default router;

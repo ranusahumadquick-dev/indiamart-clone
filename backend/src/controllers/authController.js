@@ -171,6 +171,115 @@ const updateNotificationPreferences = asyncHandler(async (req, res) => {
   );
 });
 
+// =============================================
+// DEACTIVATE ACCOUNT — Temporarily disable account
+// =============================================
+const deactivateAccount = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  if (!password) {
+    throw new ApiError(400, "Password is required to deactivate account");
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isPasswordValid = await user.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid password");
+  }
+
+  user.isActive = false;
+  await user.save();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { isActive: user.isActive },
+      "Account deactivated. You can reactivate anytime by logging in."
+    )
+  );
+});
+
+// =============================================
+// REACTIVATE ACCOUNT — Re-enable deactivated account
+// =============================================
+const reactivateAccount = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  if (!password) {
+    throw new ApiError(400, "Password is required to reactivate account");
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isPasswordValid = await user.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid password");
+  }
+
+  user.isActive = true;
+  await user.save();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { isActive: user.isActive },
+      "Account reactivated successfully. Welcome back!"
+    )
+  );
+});
+
+// =============================================
+// DELETE ACCOUNT PERMANENTLY — Hard delete account and all data
+// =============================================
+const deleteAccountPermanently = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  if (!password) {
+    throw new ApiError(400, "Password is required to delete account");
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isPasswordValid = await user.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid password");
+  }
+
+  const userId = user._id;
+
+  // Delete all related data
+  const { default: Product } = await import("../models/Product.js");
+  const { default: Inquiry } = await import("../models/Inquiry.js");
+  const { default: Subscription } = await import("../models/Subscription.js");
+  const { default: Payment } = await import("../models/Payment.js");
+
+  await Promise.all([
+    Product.deleteMany({ seller: userId }),
+    Inquiry.deleteMany({ $or: [{ seller: userId }, { buyer: userId }] }),
+    Subscription.deleteMany({ userId }),
+    Payment.deleteMany({ userId }),
+    User.findByIdAndDelete(userId),
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      null,
+      "Account and all associated data have been permanently deleted."
+    )
+  );
+});
+
 export {
   registerUser,
   loginUser,
@@ -179,4 +288,7 @@ export {
   changePassword,
   getNotificationPreferences,
   updateNotificationPreferences,
+  deactivateAccount,
+  reactivateAccount,
+  deleteAccountPermanently,
 };

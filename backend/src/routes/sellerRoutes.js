@@ -18,6 +18,7 @@ import {
   updateWhatsappNumber,
   toggleWhatsappVisibility,
   updateRequirementAlerts,
+  getTrustScore,
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
@@ -136,5 +137,8 @@ router.put(
   authMiddleware,
   markReviewHelpful
 );
+
+// GET - Get seller's trust score (public)
+router.get("/:sellerId/trust-score", getTrustScore);
 
 export default router;

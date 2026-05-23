@@ -657,3 +657,31 @@ export const updateRequirementAlerts = asyncHandler(async (req, res) => {
   );
 });
 
+// ========================================
+// GET TRUST SCORE — Get seller's trust metrics
+// GET /api/sellers/:sellerId/trust-score
+// ========================================
+export const getTrustScore = asyncHandler(async (req, res) => {
+  const { sellerId } = req.params;
+
+  const seller = await User.findById(sellerId).select("trustScore isVerified gstNumber name companyName");
+
+  if (!seller) {
+    throw new ApiError(404, "Seller not found");
+  }
+
+  // Import the service
+  const { calculateTrustScore } = await import("../utils/trustScoreService.js");
+
+  const scoreData = await calculateTrustScore(sellerId);
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      trustScore: scoreData.trustScore,
+      trustLevel: scoreData.trustLevel,
+      components: scoreData.components,
+      badges: scoreData.badges,
+    }, "Trust score retrieved successfully")
+  );
+});
+

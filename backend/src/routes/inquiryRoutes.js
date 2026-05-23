@@ -7,6 +7,11 @@ import {
   replyToInquiry,
   markAsRead,
   closeInquiry,
+  createTemplate,
+  getTemplates,
+  updateTemplate,
+  deleteTemplate,
+  pinTemplate,
 } from "../controllers/inquiryController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
@@ -53,6 +58,49 @@ router.put(
   authMiddleware,
   roleMiddleware(["seller"]),
   markAsRead
+);
+
+// ========================================
+// SELLER TEMPLATE ROUTES
+// ========================================
+// POST create template
+router.post(
+  "/templates",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  createTemplate
+);
+
+// GET seller's templates
+router.get(
+  "/templates",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  getTemplates
+);
+
+// PUT update template
+router.put(
+  "/templates/:templateId",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  updateTemplate
+);
+
+// DELETE template
+router.delete(
+  "/templates/:templateId",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  deleteTemplate
+);
+
+// PUT pin/unpin template
+router.put(
+  "/templates/:templateId/pin",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  pinTemplate
 );
 
 export default router;

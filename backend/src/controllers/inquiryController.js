@@ -344,6 +344,131 @@ const createBulkInquiry = asyncHandler(async (req, res) => {
   );
 });
 
+// =============================================
+// 📝 QUICK REPLY TEMPLATES
+// =============================================
+const createTemplate = asyncHandler(async (req, res) => {
+  const { title, content, category } = req.body;
+  const sellerId = req.user._id;
+
+  if (!title || !content) {
+    throw new ApiError(400, "Title and content are required");
+  }
+
+  // Add template to seller's responseTemplates array
+  const user = await User.findByIdAndUpdate(
+    sellerId,
+    { $push: { responseTemplates: { title, content, category: category || "general" } } },
+    { new: true, select: "responseTemplates" }
+  );
+
+  return res.status(201).json(
+    new ApiResponse(201, user.responseTemplates, "Template created successfully")
+  );
+});
+
+const getTemplates = asyncHandler(async (req, res) => {
+  const { category } = req.query;
+  const sellerId = req.user._id;
+
+  const user = await User.findById(sellerId).select("responseTemplates");
+  let templates = user?.responseTemplates || [];
+
+  if (category) {
+    templates = templates.filter((t) => t.category === category);
+  }
+
+  // Sort: pinned first, then by usage count
+  templates.sort((a, b) => {
+    if (a.isPinned !== b.isPinned) return b.isPinned - a.isPinned;
+    return b.usageCount - a.usageCount;
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, templates, "Templates retrieved successfully")
+  );
+});
+
+const updateTemplate = asyncHandler(async (req, res) => {
+  const { templateId } = req.params;
+  const { title, content, category } = req.body;
+  const sellerId = req.user._id;
+
+  const user = await User.findByIdAndUpdate(
+    sellerId,
+    {
+      $set: {
+        "responseTemplates.$[elem].title": title,
+        "responseTemplates.$[elem].content": content,
+        "responseTemplates.$[elem].category": category,
+      },
+    },
+    {
+      arrayFilters: [{ "elem._id": templateId }],
+      new: true,
+      select: "responseTemplates",
+    }
+  );
+
+  if (!user) {
+    throw new ApiError(404, "Template not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user.responseTemplates, "Template updated successfully")
+  );
+});
+
+const deleteTemplate = asyncHandler(async (req, res) => {
+  const { templateId } = req.params;
+  const sellerId = req.user._id;
+
+  const user = await User.findByIdAndUpdate(
+    sellerId,
+    { $pull: { responseTemplates: { _id: templateId } } },
+    { new: true, select: "responseTemplates" }
+  );
+
+  if (!user) {
+    throw new ApiError(404, "Template not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user.responseTemplates, "Template deleted successfully")
+  );
+});
+
+const pinTemplate = asyncHandler(async (req, res) => {
+  const { templateId } = req.params;
+  const sellerId = req.user._id;
+
+  // Get current pinned state and toggle it
+  const user = await User.findById(sellerId).select("responseTemplates");
+  const template = user?.responseTemplates?.find((t) => t._id.toString() === templateId);
+
+  if (!template) {
+    throw new ApiError(404, "Template not found");
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    sellerId,
+    {
+      $set: {
+        "responseTemplates.$[elem].isPinned": !template.isPinned,
+      },
+    },
+    {
+      arrayFilters: [{ "elem._id": templateId }],
+      new: true,
+      select: "responseTemplates",
+    }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedUser.responseTemplates, "Template pin status updated")
+  );
+});
+
 export {
   createInquiry,
   createBulkInquiry,
@@ -352,4 +477,9 @@ export {
   replyToInquiry,
   markAsRead,
   closeInquiry,
+  createTemplate,
+  getTemplates,
+  updateTemplate,
+  deleteTemplate,
+  pinTemplate,
 };

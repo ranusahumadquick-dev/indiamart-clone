@@ -175,6 +175,46 @@ const userSchema = new mongoose.Schema(
     // --- Seller Metrics ---
     avgResponseTime: { type: Number, default: 0 }, // minutes
     replyCount: { type: Number, default: 0 },
+
+    // --- Quick Reply Templates ---
+    responseTemplates: [
+      {
+        _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: [50, "Template title cannot exceed 50 characters"],
+        },
+        content: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: [500, "Template content cannot exceed 500 characters"],
+        },
+        category: {
+          type: String,
+          enum: ["general", "out_of_stock", "quote_ready", "delayed", "pending", "custom"],
+          default: "general",
+        },
+        isPinned: { type: Boolean, default: false },
+        usageCount: { type: Number, default: 0 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // --- Notification Preferences ---
+    notificationPreferences: {
+      inquiryAlerts: { type: Boolean, default: true },
+      replyNotifications: { type: Boolean, default: true },
+      reminderNotifications: { type: Boolean, default: true },
+      quotationAlerts: { type: Boolean, default: true },
+      channels: {
+        email: { type: Boolean, default: true },
+        sms: { type: Boolean, default: false },
+        whatsapp: { type: Boolean, default: false },
+      },
+    },
   },
   {
     timestamps: true,

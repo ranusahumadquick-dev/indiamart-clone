@@ -46,6 +46,15 @@ const productSchema = new mongoose.Schema(
       enum: ["Piece", "Kg", "Meter", "Liter", "Box", "Packet", "Ton", "Set"],
     },
 
+    // --- Tiered Pricing (Volume Discounts) ---
+    pricingSlabs: [
+      {
+        minQty: { type: Number, required: true }, // Minimum quantity
+        maxQty: { type: Number }, // Maximum quantity (null = unlimited)
+        price: { type: Number, required: true }, // Price for this quantity range
+      },
+    ],
+
     // --- Category ---
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -103,6 +112,29 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
     },
+
+    // --- Stock Availability Status ---
+    stockStatus: {
+      type: String,
+      enum: ["in_stock", "out_of_stock", "made_to_order"],
+      default: "in_stock",
+    },
+    leadTime: { type: String, default: "1-2 days" }, // For made-to-order products
+
+    // --- Product Catalogue (PDF) ---
+    cataloguePdf: {
+      url: { type: String }, // PDF URL
+      fileName: { type: String }, // Original file name
+      uploadedAt: { type: Date }, // When uploaded
+    },
+
+    // --- 360° View & Videos ---
+    view360Images: [
+      {
+        url: { type: String, required: true },
+        angle: { type: Number }, // 0-360 degrees
+      },
+    ],
 
     // --- Location ---
     city: { type: String, trim: true },

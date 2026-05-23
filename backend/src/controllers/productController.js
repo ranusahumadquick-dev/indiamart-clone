@@ -463,6 +463,113 @@ const getFeaturedProducts = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, products, "Featured products fetched"));
 });
 
+// =============================================
+// 📥 BULK UPLOAD PRODUCTS — From CSV/Excel
+// =============================================
+const bulkUploadProducts = asyncHandler(async (req, res) => {
+  const { products: productsData } = req.body;
+  const sellerId = req.user._id;
+
+  if (!productsData || !Array.isArray(productsData) || productsData.length === 0) {
+    throw new ApiError(400, "No products data provided");
+  }
+
+  if (productsData.length > 500) {
+    throw new ApiError(400, "Maximum 500 products can be uploaded at once");
+  }
+
+  const results = {
+    successful: [],
+    failed: [],
+    totalProcessed: productsData.length,
+  };
+
+  for (let i = 0; i < productsData.length; i++) {
+    try {
+      const {
+        name,
+        description,
+        price,
+        comparePrice,
+        currency,
+        priceUnit,
+        category,
+        stock,
+        sku,
+        images,
+      } = productsData[i];
+
+      // Validate required fields
+      if (!name || !price) {
+        results.failed.push({
+          row: i + 2,
+          productName: name || `Row ${i + 2}`,
+          error: "Name and price are required",
+        });
+        continue;
+      }
+
+      // Parse images if provided as string
+      let imageArray = [];
+      if (images) {
+        if (typeof images === "string") {
+          imageArray = images
+            .split(";")
+            .filter((url) => url.trim())
+            .map((url) => ({
+              url: url.trim(),
+              alt: `${name} - Image`,
+              type: "image",
+            }));
+        } else if (Array.isArray(images)) {
+          imageArray = images.map((img) => ({
+            url: typeof img === "string" ? img : img.url,
+            alt: `${name} - Image`,
+            type: "image",
+          }));
+        }
+      }
+
+      // Create product
+      const product = await Product.create({
+        name,
+        description: description || "",
+        price: Number(price),
+        comparePrice: comparePrice ? Number(comparePrice) : undefined,
+        currency: currency || "INR",
+        priceUnit: priceUnit || "Piece",
+        category,
+        stock: stock ? Number(stock) : 0,
+        sku: sku || `SKU-${Date.now()}-${Math.random()}`,
+        images: imageArray,
+        seller: sellerId,
+        isActive: true,
+        status: "pending",
+      });
+
+      results.successful.push({
+        id: product._id,
+        name: product.name,
+        sku: product.sku,
+      });
+    } catch (error) {
+      results.failed.push({
+        row: i + 2,
+        productName: productsData[i].name || `Row ${i + 2}`,
+        error: error.message,
+      });
+    }
+  }
+
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      results,
+      `Bulk upload completed: ${results.successful.length} successful, ${results.failed.length} failed`
+    )
+  );
+});
+
 export {
   createProduct,
   getAllProducts,
@@ -473,4 +580,5 @@ export {
   searchProducts,
   getRelatedProducts,
   getFeaturedProducts,
+  bulkUploadProducts,
 };

@@ -9,6 +9,7 @@ import {
   searchProducts,
   getRelatedProducts,
   getFeaturedProducts,
+  bulkUploadProducts,
 } from "../controllers/productController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
@@ -60,6 +61,16 @@ router.delete(
   authMiddleware,
   roleMiddleware("seller"),
   deleteProduct
+);
+
+// =============================================
+// 📥 BULK UPLOAD ROUTE
+// =============================================
+router.post(
+  "/bulk/upload",
+  authMiddleware,
+  roleMiddleware("seller"),
+  bulkUploadProducts
 );
 
 export default router;

@@ -36,3 +36,5 @@ export async function sendEmail({ to, subject, html, text }) {
 
   return info;
 }
+
+export default sendEmail;

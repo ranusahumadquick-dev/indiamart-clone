@@ -5,16 +5,17 @@ import ApiError from "../utils/ApiError.js";
  * @param  {...string} roles - Allowed roles (e.g. "seller", "admin")
  */
 const roleMiddleware = (...roles) => {
+  const allowedRoles = roles.flat(); // handles both roleMiddleware("seller") and roleMiddleware(["seller"])
   return (req, res, next) => {
     if (!req.user) {
       return next(new ApiError(401, "Unauthorized — Please login first"));
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role)) {
       return next(
         new ApiError(
           403,
-          `Forbidden — Role '${req.user.role}' is not allowed. Required: ${roles.join(" or ")}`
+          `Forbidden — Role '${req.user.role}' is not allowed. Required: ${allowedRoles.join(" or ")}`
         )
       );
     }

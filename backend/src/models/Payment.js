@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const paymentSchema = new mongoose.Schema({
   razorpayOrderId: {
@@ -136,7 +136,7 @@ paymentSchema.statics.findPendingPayments = function(userId) {
 // Static method to get payment statistics
 paymentSchema.statics.getPaymentStats = async function(userId) {
   const stats = await this.aggregate([
-    { $match: { userId: mongoose.Types.ObjectId(userId) } },
+    { $match: { userId: new mongoose.Types.ObjectId(userId) } },
     {
       $group: {
         _id: '$status',
@@ -191,4 +191,4 @@ paymentSchema.statics.getMonthlyRevenue = async function(year, month) {
 
 const Payment = mongoose.model('Payment', paymentSchema);
 
-module.exports = Payment;
+export default Payment;

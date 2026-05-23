@@ -6,6 +6,11 @@ const subscriptionPlanSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  planFor: {
+    type: String,
+    enum: ['seller', 'buyer', 'both'],
+    default: 'seller'
+  },
   description: {
     type: String,
     required: true
@@ -29,30 +34,24 @@ const subscriptionPlanSchema = new mongoose.Schema({
     required: true
   }],
   limits: {
-    maxProducts: {
-      type: Number,
-      default: 10
-    },
-    maxInquiriesPerDay: {
-      type: Number,
-      default: 50
-    },
-    maxImagesPerProduct: {
-      type: Number,
-      default: 5
-    },
-    featuredListings: {
-      type: Number,
-      default: 0
-    },
-    prioritySupport: {
-      type: Boolean,
-      default: false
-    },
-    analytics: {
-      type: Boolean,
-      default: false
-    }
+    // Seller limits
+    maxProducts: { type: Number, default: 10 },
+    maxInquiriesPerDay: { type: Number, default: 50 },
+    maxImagesPerProduct: { type: Number, default: 5 },
+    featuredListings: { type: Number, default: 0 },
+    prioritySupport: { type: Boolean, default: false },
+    analytics: { type: Boolean, default: false },
+    // Buyer limits
+    maxDailyInquiries: { type: Number, default: 5 },
+    bulkInquirySize: { type: Number, default: 3 },
+    maxPriceAlerts: { type: Number, default: 3 },
+    maxBuyRequirements: { type: Number, default: 1 },
+    sampleRequestAccess: { type: Boolean, default: false },
+    verifiedContactsAccess: { type: Boolean, default: false },
+    tradeAssurance: { type: Boolean, default: false },
+    dedicatedManager: { type: Boolean, default: false },
+    rfqAccess: { type: Boolean, default: false },
+    exportCatalogAccess: { type: Boolean, default: false },
   },
   isActive: {
     type: Boolean,
@@ -217,6 +216,132 @@ const seedDefaultPlans = async () => {
       await SubscriptionPlan.insertMany(plans);
       console.log('Default subscription plans seeded successfully');
     }
+
+    // Upsert buyer plans (always update to keep features fresh)
+    const buyerPlans = [
+      {
+        name: 'Buyer Free',
+        planFor: 'buyer',
+        description: 'Start sourcing for free — no credit card needed',
+        price: 0,
+        duration: 30,
+        features: [
+          'Browse 8+ product categories',
+          'Send up to 5 enquiries/day',
+          'Post 1 Buy Requirement/month',
+          'Rate & review suppliers',
+          'Wishlist & product comparison',
+          '3 price drop alerts',
+          'Basic product Q&A',
+        ],
+        benefits: ['No cost to get started', 'Access to thousands of verified suppliers', 'Core sourcing tools included'],
+        limits: {
+          maxDailyInquiries: 5,
+          bulkInquirySize: 3,
+          maxPriceAlerts: 3,
+          maxBuyRequirements: 1,
+          sampleRequestAccess: false,
+          verifiedContactsAccess: false,
+          tradeAssurance: false,
+          dedicatedManager: false,
+          rfqAccess: false,
+          exportCatalogAccess: false,
+        },
+        isPopular: false,
+        sortOrder: 10
+      },
+      {
+        name: 'Buyer Business',
+        planFor: 'buyer',
+        description: 'Unlock verified contacts & reach more suppliers faster',
+        price: 299,
+        duration: 30,
+        features: [
+          'Send up to 25 enquiries/day',
+          'Bulk enquiry — contact 7 sellers at once',
+          'Unlimited price drop alerts',
+          'Post up to 10 Buy Requirements/month',
+          'Request product samples before bulk order',
+          'Verified supplier phone numbers & WhatsApp',
+          '"Verified Buyer" badge — get priority responses',
+          'RFQ to multiple suppliers simultaneously',
+          'Saved supplier folders & notes',
+          'Direct negotiation chat with sellers',
+        ],
+        benefits: [
+          'Unlock verified direct contacts',
+          'Get priority responses from suppliers',
+          'Sample before committing to bulk',
+          'Faster procurement with RFQ',
+          'Unlimited price tracking',
+        ],
+        limits: {
+          maxDailyInquiries: 25,
+          bulkInquirySize: 7,
+          maxPriceAlerts: -1,
+          maxBuyRequirements: 10,
+          sampleRequestAccess: true,
+          verifiedContactsAccess: true,
+          tradeAssurance: false,
+          dedicatedManager: false,
+          rfqAccess: true,
+          exportCatalogAccess: false,
+        },
+        isPopular: true,
+        sortOrder: 11
+      },
+      {
+        name: 'Buyer Enterprise',
+        planFor: 'buyer',
+        description: 'End-to-end procurement suite for growing teams',
+        price: 799,
+        duration: 30,
+        features: [
+          'Unlimited daily enquiries',
+          'Bulk enquiry to 10 sellers at once',
+          'Unlimited Buy Requirements',
+          'Trade Assurance — payment protection on all orders',
+          'Dedicated Sourcing Manager (personal POC)',
+          'Export supplier catalog — PDF & Excel',
+          'Procurement analytics & spend dashboard',
+          '3 team member seats',
+          'Legal templates — NDA, Purchase Order, LOI',
+          'Escrow payment protection',
+          'Video call with supplier via platform',
+          'Priority support — 4hr response SLA',
+        ],
+        benefits: [
+          'Complete end-to-end procurement',
+          'Trade assurance on every order',
+          'Personal dedicated manager',
+          'Team collaboration (3 seats)',
+          'Procurement analytics & reporting',
+        ],
+        limits: {
+          maxDailyInquiries: -1,
+          bulkInquirySize: 10,
+          maxPriceAlerts: -1,
+          maxBuyRequirements: -1,
+          sampleRequestAccess: true,
+          verifiedContactsAccess: true,
+          tradeAssurance: true,
+          dedicatedManager: true,
+          rfqAccess: true,
+          exportCatalogAccess: true,
+        },
+        isPopular: false,
+        sortOrder: 12
+      }
+    ];
+
+    for (const plan of buyerPlans) {
+      await SubscriptionPlan.findOneAndUpdate(
+        { name: plan.name, planFor: 'buyer' },
+        { $set: plan },
+        { upsert: true, new: true }
+      );
+    }
+    console.log('✅ Buyer subscription plans ready');
   } catch (error) {
     console.error('Error seeding subscription plans:', error);
   }

@@ -26,11 +26,18 @@ export const createBuyRequirement = asyncHandler(async (req, res) => {
     budgetMax,
     deliveryLocation,
     deliveryTimeline,
+    isPrivate,
+    invitedSellers,
+    privateNote,
   } = req.body;
 
   // Validate required fields
   if (!productName || !categoryId || !quantityRequired) {
     throw new ApiError(400, "Product name, category, and quantity are required");
+  }
+
+  if (isPrivate && (!invitedSellers || invitedSellers.length === 0)) {
+    throw new ApiError(400, "Private requirements must invite at least one seller");
   }
 
   // Verify category exists
@@ -52,6 +59,10 @@ export const createBuyRequirement = asyncHandler(async (req, res) => {
     budgetMax,
     deliveryLocation,
     deliveryTimeline: deliveryTimeline || "Flexible",
+    isPrivate: !!isPrivate,
+    isPublic: !isPrivate,
+    invitedSellers: isPrivate ? (invitedSellers || []) : [],
+    privateNote: isPrivate ? privateNote : undefined,
   });
 
   // Populate references
@@ -90,18 +101,28 @@ export const getBuyRequirements = asyncHandler(async (req, res) => {
 
   const { skip, limit: pageLimit, currentPage } = getPagination(page, limit);
 
-  // Get buy requirements
+  // Auto-expire priority: treat isPriority as false if past expiry
+  const now = new Date();
+
+  // Get buy requirements — active priority items first, then by date
   const [buyRequirements, totalCount] = await Promise.all([
     BuyRequirement.find(filters)
       .populate("buyer", "name companyName email phone city state")
       .populate("category", "name")
       .populate("subCategory", "name")
-      .sort({ createdAt: -1 })
+      .sort({ isPriority: -1, priorityExpiresAt: -1, createdAt: -1 })
       .skip(skip)
       .limit(pageLimit)
       .lean(),
     BuyRequirement.countDocuments(filters),
   ]);
+
+  // Mark expired priorities as false in response (don't write to DB on every read)
+  buyRequirements.forEach((r) => {
+    if (r.isPriority && r.priorityExpiresAt && new Date(r.priorityExpiresAt) < now) {
+      r.isPriority = false;
+    }
+  });
 
   const pagination = getPaginationMeta(totalCount, currentPage, pageLimit);
 
@@ -125,7 +146,7 @@ export const getBuyRequirementById = asyncHandler(async (req, res) => {
     .populate("buyer", "name companyName email phone city state")
     .populate("category", "name")
     .populate("subCategory", "name")
-    .populate("responses.supplier", "name companyName email");
+    .populate("responses.supplier", "name companyName email city state isVerified businessType yearEstablished averageRating numReviews");
 
   if (!buyRequirement) {
     throw new ApiError(404, "Buy requirement not found");
@@ -247,7 +268,7 @@ export const deleteBuyRequirement = asyncHandler(async (req, res) => {
  */
 export const respondToBuyRequirement = asyncHandler(async (req, res) => {
   const { requirementId } = req.params;
-  const { message, quotedPrice } = req.body;
+  const { message, quotedPrice, moq, deliveryDays, validityDays } = req.body;
 
   if (!message) {
     throw new ApiError(400, "Response message is required");
@@ -259,6 +280,14 @@ export const respondToBuyRequirement = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Buy requirement not found");
   }
 
+  // Private requirements: only invited sellers can respond
+  if (buyRequirement.isPrivate) {
+    const isInvited = buyRequirement.invitedSellers.some(
+      (id) => id.toString() === req.user._id.toString()
+    );
+    if (!isInvited) throw new ApiError(403, "You are not invited to respond to this requirement");
+  }
+
   // Check if seller already responded
   const alreadyResponded = buyRequirement.responses.some(
     r => r.supplier.toString() === req.user._id.toString()
@@ -268,21 +297,61 @@ export const respondToBuyRequirement = asyncHandler(async (req, res) => {
     throw new ApiError(400, "You have already responded to this requirement");
   }
 
-  // Add response
+  // Add response with full quote details
   buyRequirement.responses.push({
     supplier: req.user._id,
     message,
-    quotedPrice,
+    quotedPrice: quotedPrice ? Number(quotedPrice) : undefined,
+    moq: moq ? Number(moq) : undefined,
+    deliveryDays: deliveryDays ? Number(deliveryDays) : undefined,
+    validityDays: validityDays ? Number(validityDays) : 7,
   });
 
   await buyRequirement.save();
 
-  // Populate and return
+  // Populate with rich supplier data for comparison
   const updated = await BuyRequirement.findById(requirementId)
-    .populate("responses.supplier", "name companyName email");
+    .populate("responses.supplier", "name companyName email city state isVerified businessType yearEstablished averageRating numReviews");
 
   return res.status(200).json(
     new ApiResponse(200, updated, "Response submitted successfully")
+  );
+});
+
+/**
+ * Boost Buy Requirement — Priority Response Pro
+ * POST /api/buy-requirements/:requirementId/boost
+ * Auth: Required (Only buyer who created it)
+ * Body: { duration? } — duration in days (default 7)
+ */
+export const boostBuyRequirement = asyncHandler(async (req, res) => {
+  const { requirementId } = req.params;
+  const { duration = 7 } = req.body;
+
+  const buyRequirement = await BuyRequirement.findById(requirementId);
+
+  if (!buyRequirement) {
+    throw new ApiError(404, "Buy requirement not found");
+  }
+
+  if (buyRequirement.buyer.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can only boost your own requirements");
+  }
+
+  if (buyRequirement.status !== "active") {
+    throw new ApiError(400, "Only active requirements can be boosted");
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + Number(duration) * 24 * 60 * 60 * 1000);
+
+  buyRequirement.isPriority = true;
+  buyRequirement.priorityBoostedAt = now;
+  buyRequirement.priorityExpiresAt = expiresAt;
+  await buyRequirement.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, buyRequirement, `Requirement boosted for ${duration} days!`)
   );
 });
 
@@ -328,5 +397,68 @@ export const closeBuyRequirement = asyncHandler(async (req, res) => {
 
   return res.status(200).json(
     new ApiResponse(200, updated, "Buy requirement closed successfully")
+  );
+});
+
+/**
+ * Get Private Requirements Invited To (Seller)
+ * GET /api/buy-requirements/seller/invitations
+ * Auth: Required (Seller role)
+ */
+export const getMyInvitations = asyncHandler(async (req, res) => {
+  const { status, page = 1, limit = 20 } = req.query;
+  const { skip, limit: pageLimit, currentPage } = getPagination(page, limit);
+
+  const filter = { isPrivate: true, invitedSellers: req.user._id };
+  if (status) filter.status = status;
+
+  const [requirements, total] = await Promise.all([
+    BuyRequirement.find(filter)
+      .populate("buyer", "name companyName email phone city state")
+      .populate("category", "name")
+      .populate("responses.supplier", "name companyName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageLimit)
+      .lean(),
+    BuyRequirement.countDocuments(filter),
+  ]);
+
+  const pagination = getPaginationMeta(total, currentPage, pageLimit);
+  return res.status(200).json(
+    new ApiResponse(200, { requirements, pagination }, "Private invitations fetched")
+  );
+});
+
+/**
+ * Invite Additional Sellers to a Private Requirement
+ * POST /api/buy-requirements/:requirementId/invite
+ * Auth: Required (Only buyer who created it)
+ * Body: { sellerIds: [...] }
+ */
+export const inviteMoreSellers = asyncHandler(async (req, res) => {
+  const { requirementId } = req.params;
+  const { sellerIds } = req.body;
+
+  if (!sellerIds || sellerIds.length === 0) {
+    throw new ApiError(400, "Provide at least one seller ID");
+  }
+
+  const req_ = await BuyRequirement.findById(requirementId);
+  if (!req_) throw new ApiError(404, "Requirement not found");
+  if (req_.buyer.toString() !== req.user._id.toString()) throw new ApiError(403, "Not authorized");
+  if (!req_.isPrivate) throw new ApiError(400, "This requirement is not private");
+
+  // Merge without duplicates
+  const existing = req_.invitedSellers.map((id) => id.toString());
+  const newOnes = sellerIds.filter((id) => !existing.includes(id));
+  req_.invitedSellers.push(...newOnes);
+  await req_.save();
+
+  const updated = await BuyRequirement.findById(requirementId)
+    .populate("invitedSellers", "name companyName email city isVerified");
+
+  return res.status(200).json(
+    new ApiResponse(200, updated, `${newOnes.length} seller(s) invited`)
   );
 });

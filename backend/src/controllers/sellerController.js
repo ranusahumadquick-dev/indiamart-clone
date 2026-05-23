@@ -1,48 +1,213 @@
 import User from "../models/User.js";
 import Product from "../models/Product.js";
 import Review from "../models/Review.js";
+import Inquiry from "../models/Inquiry.js";
+import mongoose from "mongoose";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 // ========================================
+// GET ALL SELLERS — Public directory
+// GET /api/sellers?search=&category=&page=&limit=
+// ========================================
+export const getSellers = asyncHandler(async (req, res) => {
+  const { search, category, verified, hasGST, page = 1, limit = 20 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const filter = { role: "seller", profileCompleted: true };
+  if (search) {
+    filter.$or = [
+      { companyName: { $regex: search, $options: "i" } },
+      { name: { $regex: search, $options: "i" } },
+      { businessType: { $regex: search, $options: "i" } },
+      { businessDescription: { $regex: search, $options: "i" } },
+      { city: { $regex: search, $options: "i" } },
+      { state: { $regex: search, $options: "i" } },
+    ];
+  }
+  if (category) filter.businessType = { $regex: category, $options: "i" };
+  if (verified === "true") filter.isVerified = true;
+  if (hasGST === "true") filter.gstNumber = { $exists: true, $ne: "" };
+
+  const [sellers, total] = await Promise.all([
+    User.find(filter)
+      .select("name companyName avatar businessType businessDescription city state isVerified isEmailVerified isPhoneVerified gstNumber yearEstablished avgResponseTime replyCount")
+      .sort({ isVerified: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    User.countDocuments(filter),
+  ]);
+
+  // Attach product count per seller
+  const sellerIds = sellers.map((s) => s._id);
+  const productCounts = await Product.aggregate([
+    { $match: { seller: { $in: sellerIds }, isActive: true } },
+    { $group: { _id: "$seller", count: { $sum: 1 } } },
+  ]);
+  const countMap = Object.fromEntries(productCounts.map(({ _id, count }) => [_id.toString(), count]));
+
+  const result = sellers.map((s) => {
+    const obj = s.toObject();
+    return {
+      ...obj,
+      productCount: countMap[s._id.toString()] || 0,
+      hasGST: !!(obj.gstNumber),
+      gstNumber: undefined, // never expose actual GST number in listing
+    };
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, { sellers: result, total, page: Number(page), pages: Math.ceil(total / Number(limit)) }, "Sellers fetched")
+  );
+});
+
+// ========================================
+// REQUEST VERIFICATION
+// POST /api/sellers/request-verification
+// Auth: Seller only
+// ========================================
+export const requestVerification = asyncHandler(async (req, res) => {
+  const seller = await User.findById(req.user._id);
+
+  if (!seller) throw new ApiError(404, "Seller not found");
+  if (seller.isVerified) throw new ApiError(400, "Your account is already verified");
+  if (seller.verificationRequested) {
+    throw new ApiError(400, "Verification request already submitted. Admin will review it soon.");
+  }
+  if (!seller.profileCompleted) {
+    throw new ApiError(400, "Please complete your seller profile before requesting verification");
+  }
+
+  const { note } = req.body;
+
+  seller.verificationRequested = true;
+  seller.verificationRequestedAt = new Date();
+  if (note) seller.verificationNote = note;
+  await seller.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, { verificationRequested: true }, "Verification request submitted successfully. Admin will review within 2-3 business days.")
+  );
+});
+
+// ========================================
 // SELLER PROFILE CONTROLLERS
 // ========================================
 
+// ========================================
+// PROFILE COMPLETENESS SCORE
+// ========================================
+function computeProfileScore(user) {
+  let score = 0;
+  if (user.companyName)        score += 10;
+  if (user.businessType)       score += 8;
+  if (user.businessDescription && user.businessDescription.length >= 50) score += 12;
+  if (user.businessLogo)       score += 8;
+  if (user.city && user.state) score += 6;
+  if (user.gstNumber)          score += 8;
+  if (user.yearEstablished)    score += 4;
+  if (user.website)            score += 4;
+  if (user.mainProducts?.length > 0) score += 10;
+  if (user.annualTurnover)     score += 6;
+  if (user.employeeCount)      score += 6;
+  if (user.exportCapability)   score += 4;
+  if (user.productionCapacity) score += 4;
+  if (user.certifications?.length > 0 || user.certificationDocs?.length > 0) score += 6;
+  if (user.paymentTerms?.length > 0)   score += 4;
+  const anyLink = user.socialLinks?.linkedin || user.socialLinks?.facebook || user.socialLinks?.instagram;
+  if (anyLink) score += 4;
+  if (user.companyVideo) score += 6;
+  if (user.phone) score += 6;
+  return Math.min(score, 100);
+}
+
 /**
- * Complete Seller Profile
+ * GET My Seller Profile
+ * GET /api/sellers/me
+ * Auth: Required (Seller only)
+ */
+export const getMySellerProfile = asyncHandler(async (req, res) => {
+  const seller = await User.findById(req.user._id).select("-password -refreshToken");
+  if (!seller) throw new ApiError(404, "Seller not found");
+  const profileScore = computeProfileScore(seller);
+  return res.status(200).json(
+    new ApiResponse(200, { seller, profileScore }, "Profile fetched")
+  );
+});
+
+/**
+ * Update My Seller Profile
+ * PUT /api/sellers/me
+ * Auth: Required (Seller only)
+ */
+export const updateMySellerProfile = asyncHandler(async (req, res) => {
+  const ALLOWED = [
+    "companyName", "businessType", "businessDescription", "businessLogo",
+    "website", "city", "state", "pincode", "yearEstablished", "gstNumber",
+    "annualTurnover", "employeeCount", "exportCapability", "mainProducts",
+    "certifications", "socialLinks", "paymentTerms", "minOrderValue",
+    "productionCapacity", "exportCountries", "tradeShows",
+    "companyVideo", "virtualTourUrl",
+  ];
+
+  const update = {};
+  ALLOWED.forEach((key) => {
+    if (req.body[key] !== undefined) update[key] = req.body[key];
+  });
+
+  if (Object.keys(update).length === 0) throw new ApiError(400, "No valid fields to update");
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    { ...update, profileCompleted: true },
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  const profileScore = computeProfileScore(seller);
+  return res.status(200).json(
+    new ApiResponse(200, { seller, profileScore }, "Profile updated successfully")
+  );
+});
+
+/**
+ * Complete Seller Profile (initial setup)
  * POST /api/sellers/complete-profile
- * Body: companyName, gstNumber, businessType, businessDescription, businessLogo, website, city, state, pincode
  * Auth: Required (Seller only)
  */
 export const completeSellerProfile = asyncHandler(async (req, res) => {
-  const { companyName, gstNumber, businessType, businessDescription, businessLogo, website, city, state, pincode } = req.body;
+  const {
+    companyName, gstNumber, businessType, businessDescription, businessLogo,
+    website, city, state, pincode, yearEstablished,
+    annualTurnover, employeeCount, exportCapability, mainProducts,
+    certifications, socialLinks, paymentTerms, minOrderValue, productionCapacity,
+  } = req.body;
 
-  // Validate required fields
   if (!companyName || !businessType || !businessDescription) {
     throw new ApiError(400, "Company name, business type, and description are required");
   }
 
-  // Update user profile
   const updatedUser = await User.findByIdAndUpdate(
     req.user._id,
     {
-      companyName,
-      gstNumber,
-      businessType,
-      businessDescription,
-      businessLogo,
-      website,
-      city,
-      state,
-      pincode,
-      profileCompleted: true, // Mark profile as completed
+      companyName, gstNumber, businessType, businessDescription, businessLogo,
+      website, city, state, pincode,
+      yearEstablished: yearEstablished ? Number(yearEstablished) : undefined,
+      annualTurnover, employeeCount, exportCapability,
+      mainProducts: mainProducts || [],
+      certifications: certifications || [],
+      socialLinks: socialLinks || {},
+      paymentTerms: paymentTerms || [],
+      minOrderValue: minOrderValue ? Number(minOrderValue) : 0,
+      productionCapacity,
+      profileCompleted: true,
     },
     { new: true, runValidators: true }
   ).select("-password -refreshToken");
 
+  const profileScore = computeProfileScore(updatedUser);
   return res.status(200).json(
-    new ApiResponse(200, updatedUser, "Profile completed successfully")
+    new ApiResponse(200, { seller: updatedUser, profileScore }, "Profile completed successfully")
   );
 });
 
@@ -220,6 +385,162 @@ export const postSellerReview = asyncHandler(async (req, res) => {
  * PUT /api/reviews/:reviewId/helpful
  * Auth: Required
  */
+// ========================================
+// SELLER ANALYTICS — Dashboard charts data
+// GET /api/sellers/analytics
+// ========================================
+export const getSellerAnalytics = asyncHandler(async (req, res) => {
+  const sellerId = req.user._id;
+  const now = new Date();
+
+  // Last 7 days range
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  // Last 30 days range
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const [
+    topProducts,
+    inquiriesPerDay,
+    totalViewsResult,
+    conversionResult,
+  ] = await Promise.allSettled([
+    // Top 5 products by views
+    Product.find({ seller: sellerId, isActive: true })
+      .sort({ views: -1 })
+      .limit(5)
+      .select("name views inquiryCount images price status"),
+
+    // Inquiries per day over last 7 days
+    Inquiry.aggregate([
+      {
+        $match: {
+          seller: new mongoose.Types.ObjectId(sellerId),
+          createdAt: { $gte: sevenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+
+    // Total views across all products
+    Product.aggregate([
+      { $match: { seller: new mongoose.Types.ObjectId(sellerId) } },
+      { $group: { _id: null, totalViews: { $sum: "$views" }, totalInquiries: { $sum: "$inquiryCount" } } },
+    ]),
+
+    // Monthly inquiry count for last 30 days
+    Inquiry.countDocuments({
+      seller: sellerId,
+      createdAt: { $gte: thirtyDaysAgo },
+    }),
+  ]);
+
+  // Build last-7-days labels
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+
+  const inquiryMap = {};
+  if (inquiriesPerDay.status === "fulfilled") {
+    inquiriesPerDay.value.forEach((r) => { inquiryMap[r._id] = r.count; });
+  }
+
+  const inquiryTrend = days.map((d) => ({
+    date: d,
+    label: new Date(d).toLocaleDateString("en-IN", { weekday: "short" }),
+    value: inquiryMap[d] || 0,
+  }));
+
+  const totals = totalViewsResult.status === "fulfilled" ? totalViewsResult.value[0] : null;
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      topProducts: topProducts.status === "fulfilled" ? topProducts.value : [],
+      inquiryTrend,
+      totalViews: totals?.totalViews || 0,
+      totalInquiries: totals?.totalInquiries || 0,
+      monthlyInquiries: conversionResult.status === "fulfilled" ? conversionResult.value : 0,
+      conversionRate: totals?.totalViews
+        ? ((totals.totalInquiries / totals.totalViews) * 100).toFixed(1)
+        : "0.0",
+    }, "Analytics fetched")
+  );
+});
+
+/**
+ * Add Certification Document
+ * POST /api/sellers/me/certifications
+ * Body (multipart): name, issuingBody, certNumber, issuedDate, expiryDate + file: certificate
+ */
+export const addCertificationDoc = asyncHandler(async (req, res) => {
+  const { name, issuingBody, certNumber, issuedDate, expiryDate } = req.body;
+
+  if (!name) throw new ApiError(400, "Certification name is required");
+
+  const docEntry = {
+    name,
+    issuingBody: issuingBody || "",
+    certNumber:  certNumber  || "",
+    issuedDate:  issuedDate  ? new Date(issuedDate)  : undefined,
+    expiryDate:  expiryDate  ? new Date(expiryDate)  : undefined,
+    imageUrl:    "",
+    publicId:    "",
+    fileType:    "image",
+    isAdminVerified: false,
+  };
+
+  if (req.file) {
+    docEntry.imageUrl = req.file.path;
+    docEntry.publicId = req.file.filename;
+    docEntry.fileType = req.file.mimetype === "application/pdf" ? "pdf" : "image";
+  }
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    { $push: { certificationDocs: docEntry } },
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  const profileScore = computeProfileScore(seller);
+  return res.status(201).json(
+    new ApiResponse(201, { seller, profileScore }, "Certification added successfully")
+  );
+});
+
+/**
+ * Delete Certification Document
+ * DELETE /api/sellers/me/certifications/:certId
+ */
+export const deleteCertificationDoc = asyncHandler(async (req, res) => {
+  const { certId } = req.params;
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { certificationDocs: { _id: certId } } },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (!seller) throw new ApiError(404, "Seller not found");
+
+  const profileScore = computeProfileScore(seller);
+  return res.status(200).json(
+    new ApiResponse(200, { seller, profileScore }, "Certification deleted")
+  );
+});
+
 export const markReviewHelpful = asyncHandler(async (req, res) => {
   const { reviewId } = req.params;
 
@@ -247,3 +568,4 @@ export const markReviewHelpful = asyncHandler(async (req, res) => {
     new ApiResponse(200, review, "Review helpful status updated")
   );
 });
+

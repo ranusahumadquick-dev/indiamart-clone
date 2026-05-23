@@ -1,0 +1,1 @@
+{"statusCode":200,"data":{"products":[],"pagination":{"currentPage":1,"totalPages":0,"totalItems":0,"itemsPerPage":8,"hasNextPage":false,"hasPrevPage":false,"nextPage":null,"prevPage":null}},"message":"Products fetched successfully","success":true}

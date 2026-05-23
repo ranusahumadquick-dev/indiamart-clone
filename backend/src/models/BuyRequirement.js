@@ -78,6 +78,9 @@ const buyRequirementSchema = new mongoose.Schema(
         },
         message: String,
         quotedPrice: Number,
+        moq: Number,           // Minimum Order Quantity supplier can fulfill
+        deliveryDays: Number,  // Estimated delivery in days
+        validityDays: Number,  // Quote valid for X days from respondedAt
         respondedAt: { type: Date, default: Date.now },
       },
     ],
@@ -90,6 +93,16 @@ const buyRequirementSchema = new mongoose.Schema(
 
     // --- Visibility ---
     isPublic: { type: Boolean, default: true },
+
+    // --- Private Requirement Pro ---
+    isPrivate: { type: Boolean, default: false },
+    invitedSellers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    privateNote: { type: String, maxlength: 500 }, // confidential note to invited sellers
+
+    // --- Priority Response Pro ---
+    isPriority: { type: Boolean, default: false },
+    priorityBoostedAt: { type: Date },
+    priorityExpiresAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -99,6 +112,8 @@ buyRequirementSchema.index({ buyer: 1, createdAt: -1 });
 buyRequirementSchema.index({ category: 1, status: 1 });
 buyRequirementSchema.index({ "deliveryLocation.city": 1 });
 buyRequirementSchema.index({ status: 1 });
+buyRequirementSchema.index({ isPriority: -1, createdAt: -1 });
+buyRequirementSchema.index({ invitedSellers: 1, isPrivate: 1 });
 buyRequirementSchema.index({ createdAt: -1 });
 
 const BuyRequirement = mongoose.model("BuyRequirement", buyRequirementSchema);

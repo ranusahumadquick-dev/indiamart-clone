@@ -27,6 +27,10 @@ const productSchema = new mongoose.Schema(
       required: [true, "Price is required"],
       min: [0, "Price cannot be negative"],
     },
+    priceMax: {
+      type: Number,
+      min: [0, "Price max cannot be negative"],
+    },
     comparePrice: {
       type: Number,
       min: [0, "Compare price cannot be negative"],
@@ -116,6 +120,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    // --- Sample Settings ---
+    allowSamples: { type: Boolean, default: false },
+    samplePrice: { type: Number, default: 0, min: 0 },
+    sampleMinQty: { type: Number, default: 1, min: 1 },
+    sampleMaxQty: { type: Number, default: 5, min: 1 },
+    sampleLeadTime: { type: String, default: "3-5 days" },
 
     // --- Status & Flags ---
     isActive: { type: Boolean, default: true },

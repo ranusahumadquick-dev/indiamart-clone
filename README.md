@@ -57,16 +57,7 @@ indiamart/
 │       ├── lib/                  # Axios instance, helpers
 │       └── types/                # TypeScript type definitions
 │
-├── server/                       # Legacy/secondary Express server
-│   ├── server.js
-│   ├── routes/
-│   ├── models/
-│   ├── controllers/
-│   ├── middleware/
-│   └── config/
-│
-├── scripts/                      # Utility scripts
-├── package.json                  # Root — runs both servers concurrently
+├── package.json                  # Root — runs frontend + backend concurrently
 └── README.md
 ```
 
@@ -198,6 +189,117 @@ npm run dev:frontend   # Frontend only
 npm run build          # Build frontend for production
 npm run install:all    # Install dependencies for backend + frontend
 ```
+
+## Screenshots
+
+### Home Page
+![Home Page](docs/screenshots/home.png)
+
+### Login Page
+![Login Page](docs/screenshots/login.png)
+
+### Register / Signup Page
+![Register Page](docs/screenshots/register.png)
+
+### Product Listing
+![Products](docs/screenshots/products.png)
+
+### Product Detail Page
+![Product Detail](docs/screenshots/product-detail.png)
+
+### Product Search
+![Search Results](docs/screenshots/search.png)
+
+### Categories Page
+![Categories](docs/screenshots/categories.png)
+
+### Seller Directory
+![Sellers](docs/screenshots/sellers.png)
+
+### Public Seller Profile
+![Seller Profile](docs/screenshots/seller-profile-public.png)
+
+### Compare Products
+![Compare](docs/screenshots/compare.png)
+
+### Buy Requirements (RFQ Board)
+![RFQ Board](docs/screenshots/rfq-board.png)
+
+### Subscription Plans
+![Plans](docs/screenshots/plans.png)
+
+---
+
+### Buyer Dashboard
+![Buyer Dashboard](docs/screenshots/buyer-dashboard.png)
+
+### Buyer Inquiries
+![Buyer Inquiries](docs/screenshots/buyer-inquiries.png)
+
+### Buyer Requirements
+![Buyer Requirements](docs/screenshots/buyer-requirements.png)
+
+### Buyer Sample Requests
+![Buyer Samples](docs/screenshots/buyer-samples.png)
+
+### Buyer Wishlist
+![Wishlist](docs/screenshots/buyer-wishlist.png)
+
+### Notifications
+![Notifications](docs/screenshots/notifications.png)
+
+### Price Alerts
+![Price Alerts](docs/screenshots/price-alerts.png)
+
+### Account Profile Settings
+![Profile Settings](docs/screenshots/account-profile.png)
+
+---
+
+### Seller Dashboard
+![Seller Dashboard](docs/screenshots/seller-dashboard.png)
+
+### Seller Products
+![Seller Products](docs/screenshots/seller-products.png)
+
+### Add New Product
+![Add Product](docs/screenshots/add-product.png)
+
+### Seller Inquiries Inbox
+![Seller Inquiries](docs/screenshots/seller-inquiries.png)
+
+### Seller Sample Requests
+![Seller Samples](docs/screenshots/seller-samples.png)
+
+### Seller Business Profile
+![Business Profile](docs/screenshots/seller-biz-profile.png)
+
+### Seller Onboarding Wizard
+![Onboarding](docs/screenshots/seller-onboarding.png)
+
+---
+
+### Admin Dashboard
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+
+### Admin User Management
+![Admin Users](docs/screenshots/admin-users.png)
+
+### Admin Product Moderation
+![Admin Products](docs/screenshots/admin-products.png)
+
+### Admin Categories
+![Admin Categories](docs/screenshots/admin-categories.png)
+
+---
+
+### Mobile Responsive — Home
+![Mobile Home](docs/screenshots/mobile-home.png)
+
+### Mobile Responsive — Products
+![Mobile Products](docs/screenshots/mobile-products.png)
+
+---
 
 ## License
 

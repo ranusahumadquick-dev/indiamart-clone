@@ -51,8 +51,8 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid credentials");
   }
 
-  if (user.isBanned) {
-    throw new ApiError(403, "Account banned");
+  if (user.isActive === false) {
+    throw new ApiError(403, "Your account has been deactivated. Contact support.");
   }
 
   const isMatch = await user.comparePassword(password);

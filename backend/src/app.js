@@ -15,6 +15,15 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
 import buyRequirementRoutes from "./routes/buyRequirementRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import sampleRoutes from "./routes/sampleRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import questionRoutes from "./routes/questionRoutes.js";
+import priceAlertRoutes from "./routes/priceAlertRoutes.js";
+import sourcingRoutes from "./routes/sourcingRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 // =============================================
 // Middleware Imports
@@ -29,14 +38,6 @@ const app = express();
 
 // Helmet — Sets security HTTP headers
 app.use(helmet());
-
-// Rate Limiting — Prevent brute force / spam
-const limiter = rateLimit({
-  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_MAX) || 100,
-  message: { success: false, message: "Too many requests, please try again later." },
-});
-app.use("/api/", limiter);
 
 // =============================================
 // GLOBAL MIDDLEWARE
@@ -61,7 +62,7 @@ app.use(cookieParser());
 app.use(express.static("public"));
 
 // =============================================
-// API HEALTH CHECK
+// API HEALTH CHECK — before rate limiter
 // =============================================
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -71,6 +72,15 @@ app.get("/api/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
   });
 });
+
+// Rate Limiting — skipped in development (evaluated per-request so dotenv is loaded by then)
+const limiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_MAX) || 1000,
+  skip: () => process.env.NODE_ENV === "development",
+  message: { success: false, message: "Too many requests, please try again later." },
+});
+app.use("/api/", limiter);
 
 // =============================================
 // API ROUTES
@@ -83,6 +93,15 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/buy-requirements", buyRequirementRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/samples", sampleRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/price-alerts", priceAlertRoutes);
+app.use("/api/sourcing-requests", sourcingRoutes);
+app.use("/api/orders", orderRoutes);
 
 // =============================================
 // 404 HANDLER — Route not found

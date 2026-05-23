@@ -60,4 +60,42 @@ export const uploadAvatar = multer({
   },
 }).single("avatar");
 
-export default { uploadProductImages, uploadAvatar };
+/**
+ * Multer upload middleware for certification documents (images + PDF)
+ */
+/**
+ * Multer upload middleware for company video (mp4/mov/webm, up to 100MB)
+ */
+export const uploadVideo = multer({
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: "indiamart/videos",
+      resource_type: "video",
+      allowedFormats: ["mp4", "mov", "webm", "avi"],
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/avi"];
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error("Only MP4, MOV, WebM, AVI allowed"), false);
+  },
+}).single("video");
+
+export const uploadCertificate = multer({
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: "indiamart/certifications",
+      allowedFormats: ["jpg", "jpeg", "png", "webp", "pdf"],
+      resource_type: "auto",
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error("Only JPG, PNG, WebP, or PDF allowed"), false);
+  },
+}).single("certificate");
+
+export default { uploadProductImages, uploadAvatar, uploadCertificate };

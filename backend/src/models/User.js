@@ -111,6 +111,9 @@ const userSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     isEmailVerified: { type: Boolean, default: false },
     isPhoneVerified: { type: Boolean, default: false },
+    verificationRequested: { type: Boolean, default: false },
+    verificationRequestedAt: { type: Date },
+    verificationNote: { type: String, trim: true }, // seller's note when requesting
 
     // --- Tokens ---
     refreshToken: { type: String, select: false },
@@ -121,6 +124,57 @@ const userSchema = new mongoose.Schema(
     // --- Status ---
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
+
+    // --- Seller Advanced Profile ---
+    annualTurnover: {
+      type: String,
+      enum: ["below_1cr", "1_5cr", "5_10cr", "10_50cr", "50_100cr", "above_100cr", ""],
+      default: "",
+    },
+    employeeCount: {
+      type: String,
+      enum: ["1-10", "11-50", "51-200", "201-500", "500+", ""],
+      default: "",
+    },
+    exportCapability: {
+      type: String,
+      enum: ["domestic_only", "export_only", "both", ""],
+      default: "",
+    },
+    mainProducts: [{ type: String, trim: true, maxlength: 100 }],
+    certifications: [{ type: String, trim: true, maxlength: 100 }],
+    certificationDocs: [
+      {
+        name:          { type: String, required: true, trim: true, maxlength: 200 },
+        issuingBody:   { type: String, trim: true, maxlength: 200, default: "" },
+        certNumber:    { type: String, trim: true, maxlength: 100, default: "" },
+        issuedDate:    { type: Date },
+        expiryDate:    { type: Date },
+        imageUrl:      { type: String, default: "" },
+        publicId:      { type: String, default: "" },
+        fileType:      { type: String, enum: ["image", "pdf"], default: "image" },
+        isAdminVerified: { type: Boolean, default: false },
+      },
+    ],
+    socialLinks: {
+      linkedin:  { type: String, trim: true, default: "" },
+      facebook:  { type: String, trim: true, default: "" },
+      instagram: { type: String, trim: true, default: "" },
+    },
+    paymentTerms: [{
+      type: String,
+      enum: ["advance", "lc", "dp", "da", "net30", "net60", "cod"],
+    }],
+    minOrderValue: { type: Number, min: 0, default: 0 },
+    productionCapacity: { type: String, trim: true, maxlength: 200, default: "" },
+    exportCountries: [{ type: String, trim: true }],
+    tradeShows: [{ type: String, trim: true }],
+    companyVideo: { type: String, trim: true, default: "" },   // YouTube URL or Cloudinary video
+    virtualTourUrl: { type: String, trim: true, default: "" }, // 360° tour / second video link
+
+    // --- Seller Metrics ---
+    avgResponseTime: { type: Number, default: 0 }, // minutes
+    replyCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -152,17 +206,10 @@ userSchema.virtual("products", {
 // ========================================
 
 // Hash password BEFORE saving to database
-userSchema.pre("save", async function (next) {
-  // Only hash if password is modified
-  if (!this.isModified("password")) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // ========================================

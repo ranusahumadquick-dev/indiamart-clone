@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getPagination, getPaginationMeta } from "../utils/pagination.js";
+import { triggerPriceAlerts, triggerStockAlerts } from "./priceAlertController.js";
 
 // =============================================
 // 📦 CREATE PRODUCT — Seller creates a product
@@ -12,6 +13,7 @@ const createProduct = asyncHandler(async (req, res) => {
     name,
     description,
     price,
+    priceMax,
     comparePrice,
     priceUnit,
     category,
@@ -23,6 +25,11 @@ const createProduct = asyncHandler(async (req, res) => {
     stock,
     city,
     state,
+    allowSamples,
+    samplePrice,
+    sampleMinQty,
+    sampleMaxQty,
+    sampleLeadTime,
   } = req.body;
 
   // 1. Validate required fields
@@ -44,6 +51,7 @@ const createProduct = asyncHandler(async (req, res) => {
     name,
     description,
     price,
+    priceMax: priceMax || undefined,
     comparePrice,
     priceUnit,
     category,
@@ -62,6 +70,11 @@ const createProduct = asyncHandler(async (req, res) => {
     stock,
     city,
     state,
+    allowSamples: allowSamples === "true" || allowSamples === true,
+    samplePrice: samplePrice || 0,
+    sampleMinQty: sampleMinQty || 1,
+    sampleMaxQty: sampleMaxQty || 5,
+    sampleLeadTime: sampleLeadTime || "3-5 days",
   });
 
   return res
@@ -81,6 +94,9 @@ const getAllProducts = asyncHandler(async (req, res) => {
     city,
     state,
     minRating,
+    maxMOQ,
+    isVerified,
+    allowSamples,
     sortBy,
     isFeatured,
     page = 1,
@@ -96,6 +112,10 @@ const getAllProducts = asyncHandler(async (req, res) => {
   if (minRating) filters.averageRating = { $gte: Number(minRating) };
   if (city) filters.city = { $regex: city, $options: "i" };
   if (state) filters.state = { $regex: state, $options: "i" };
+  if (isVerified === "true") filters.isVerified = true;
+  if (allowSamples === "true") filters.allowSamples = true;
+  // maxMOQ: show products where minOrderQuantity <= maxMOQ (buyer can afford the MOQ)
+  if (maxMOQ) filters.minOrderQuantity = { $lte: Number(maxMOQ) };
 
   if (minPrice || maxPrice) {
     filters.price = {};
@@ -130,7 +150,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   const [products, totalProducts] = await Promise.all([
     Product.find(filters)
       .populate("category", "name slug")
-      .populate("seller", "name companyName")
+      .populate("seller", "name companyName avgResponseTime")
       .sort(sortOptions)
       .skip(skip)
       .limit(pageLimit),
@@ -163,7 +183,7 @@ const getSingleProduct = asyncHandler(async (req, res) => {
   })
     .populate("category", "name slug")
     .populate("subCategory", "name slug")
-    .populate("seller", "name companyName city state isVerified avatar");
+    .populate("seller", "name companyName city state isVerified avatar avgResponseTime");
 
   if (!product) {
     throw new ApiError(404, "Product not found");
@@ -203,10 +223,24 @@ const updateProduct = asyncHandler(async (req, res) => {
     updatedData.specifications = JSON.parse(updatedData.specifications);
   }
 
+  const existingProduct = await Product.findOne({ _id: id, seller: req.user._id });
+  const oldPrice = existingProduct?.price;
+
   const updatedProduct = await Product.findByIdAndUpdate(id, updatedData, {
     new: true,
     runValidators: true,
   });
+
+  // Trigger price alerts if price was lowered
+  if (updatedData.price && oldPrice && updatedData.price < oldPrice) {
+    triggerPriceAlerts(id, updatedData.price, updatedProduct.name).catch(() => {});
+  }
+  // Trigger stock alerts if stock went from 0 to >0
+  const oldStock = existingProduct?.stock || 0;
+  const newStock = Number(updatedData.stock);
+  if (!isNaN(newStock) && oldStock === 0 && newStock > 0) {
+    triggerStockAlerts(id, newStock, updatedProduct.name).catch(() => {});
+  }
 
   return res
     .status(200)

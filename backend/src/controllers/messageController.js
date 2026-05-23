@@ -7,18 +7,25 @@ import asyncHandler from "../utils/asyncHandler.js";
 // GET /api/messages/conversations — list user's conversations
 const getConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
-    participants: req.user._id,
-    isActive: true,
+    $or: [
+      { buyer: req.user._id },
+      { seller: req.user._id }
+    ],
+    status: { $ne: "closed" }
   })
-    .sort({ lastMessageAt: -1 })
-    .populate("participants", "name avatar role companyName")
+    .sort({ lastMessageTime: -1 })
+    .populate("buyer", "name avatar role companyName")
+    .populate("seller", "name avatar role companyName")
     .populate("product", "name images");
 
   // Attach unread count for current user
-  const result = conversations.map((c) => ({
-    ...c.toObject(),
-    myUnread: c.unreadCount?.get?.(req.user._id.toString()) || 0,
-  }));
+  const result = conversations.map((c) => {
+    const isBuyer = c.buyer._id.toString() === req.user._id.toString();
+    return {
+      ...c.toObject(),
+      myUnread: isBuyer ? c.buyerUnreadCount || 0 : c.sellerUnreadCount || 0,
+    };
+  });
 
   return res.status(200).json(new ApiResponse(200, result, "Conversations fetched"));
 });
@@ -31,9 +38,9 @@ const getMessages = asyncHandler(async (req, res) => {
   const conversation = await Conversation.findById(id);
   if (!conversation) throw new ApiError(404, "Conversation not found");
 
-  const isParticipant = conversation.participants.some(
-    (p) => p.toString() === req.user._id.toString()
-  );
+  const isParticipant =
+    conversation.buyer.toString() === req.user._id.toString() ||
+    conversation.seller.toString() === req.user._id.toString();
   if (!isParticipant) throw new ApiError(403, "Not authorized");
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -52,8 +59,12 @@ const getMessages = asyncHandler(async (req, res) => {
     { $addToSet: { readBy: req.user._id } }
   );
   // Reset unread count
+  const isBuyer = conversation.buyer.toString() === req.user._id.toString();
+  const unreadField = isBuyer ? "buyerUnreadCount" : "sellerUnreadCount";
+  const readAtField = isBuyer ? "buyerReadAt" : "sellerReadAt";
+
   await Conversation.findByIdAndUpdate(id, {
-    $set: { [`unreadCount.${req.user._id}`]: 0 },
+    $set: { [unreadField]: 0, [readAtField]: new Date() },
   });
 
   return res.status(200).json(
@@ -68,20 +79,21 @@ const startConversation = asyncHandler(async (req, res) => {
 
   // Check for existing conversation between these two about this product
   const existing = await Conversation.findOne({
-    participants: { $all: [req.user._id, sellerId] },
+    buyer: req.user._id,
+    seller: sellerId,
     ...(productId ? { product: productId } : {}),
-    isActive: true,
+    status: { $ne: "closed" },
   });
 
   let conversation = existing;
   if (!conversation) {
     conversation = await Conversation.create({
-      participants: [req.user._id, sellerId],
+      buyer: req.user._id,
+      seller: sellerId,
       ...(productId ? { product: productId } : {}),
-      type: "general",
       lastMessage: message,
-      lastMessageAt: new Date(),
-      unreadCount: { [sellerId]: 1 },
+      lastMessageTime: new Date(),
+      sellerUnreadCount: 1,
     });
   }
 
@@ -117,9 +129,9 @@ const sendMessage = asyncHandler(async (req, res) => {
   const conversation = await Conversation.findById(id);
   if (!conversation) throw new ApiError(404, "Conversation not found");
 
-  const isParticipant = conversation.participants.some(
-    (p) => p.toString() === req.user._id.toString()
-  );
+  const isParticipant =
+    conversation.buyer.toString() === req.user._id.toString() ||
+    conversation.seller.toString() === req.user._id.toString();
   if (!isParticipant) throw new ApiError(403, "Not authorized");
 
   const message = await Message.create({
@@ -130,18 +142,20 @@ const sendMessage = asyncHandler(async (req, res) => {
     readBy: [req.user._id],
   });
 
-  // Update conversation lastMessage + increment unread for other participants
-  const otherParticipants = conversation.participants.filter(
-    (p) => p.toString() !== req.user._id.toString()
-  );
-  const unreadInc = {};
-  otherParticipants.forEach((p) => { unreadInc[`unreadCount.${p}`] = 1; });
-
-  await Conversation.findByIdAndUpdate(id, {
+  // Update conversation lastMessage + increment unread for other participant
+  const isBuyer = conversation.buyer.toString() === req.user._id.toString();
+  const updateData = {
     lastMessage: text,
-    lastMessageAt: new Date(),
-    $inc: unreadInc,
-  });
+    lastMessageTime: new Date(),
+    lastMessageBy: req.user._id,
+  };
+  if (isBuyer) {
+    updateData.$inc = { sellerUnreadCount: 1 };
+  } else {
+    updateData.$inc = { buyerUnreadCount: 1 };
+  }
+
+  await Conversation.findByIdAndUpdate(id, updateData);
 
   const populated = await message.populate("sender", "name avatar role");
 
@@ -151,12 +165,20 @@ const sendMessage = asyncHandler(async (req, res) => {
 // PUT /api/messages/conversations/:id/read — mark conversation as read
 const markAsRead = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const conversation = await Conversation.findById(id);
+  if (!conversation) throw new ApiError(404, "Conversation not found");
+
   await Message.updateMany(
     { conversation: id, readBy: { $ne: req.user._id } },
     { $addToSet: { readBy: req.user._id } }
   );
+
+  const isBuyer = conversation.buyer.toString() === req.user._id.toString();
+  const unreadField = isBuyer ? "buyerUnreadCount" : "sellerUnreadCount";
+  const readAtField = isBuyer ? "buyerReadAt" : "sellerReadAt";
+
   await Conversation.findByIdAndUpdate(id, {
-    $set: { [`unreadCount.${req.user._id}`]: 0 },
+    $set: { [unreadField]: 0, [readAtField]: new Date() },
   });
   return res.status(200).json(new ApiResponse(200, {}, "Marked as read"));
 });

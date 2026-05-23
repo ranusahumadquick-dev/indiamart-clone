@@ -11,6 +11,8 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         "inquiry_reply",
+        "inquiry_reminder",
+        "quotation_generated",
         "sample_status",
         "requirement_response",
         "product_approved",

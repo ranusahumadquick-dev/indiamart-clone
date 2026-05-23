@@ -4,6 +4,7 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getPagination, getPaginationMeta } from "../utils/pagination.js";
+import { sendRequirementAlerts } from "../utils/requirementAlertService.js";
 
 // ========================================
 // POST BUY REQUIREMENT CONTROLLERS
@@ -70,6 +71,26 @@ export const createBuyRequirement = asyncHandler(async (req, res) => {
     .populate("buyer", "name companyName email phone")
     .populate("category", "name")
     .populate("subCategory", "name");
+
+  // Send requirement alerts to matching sellers (async, no wait needed)
+  if (!isPrivate) {
+    const alertData = {
+      _id: buyRequirement._id,
+      category: category.name,
+      subCategory: subCategoryId ? (await Category.findById(subCategoryId))?.name : null,
+      productName,
+      description,
+      quantityRequired,
+      unit,
+      budgetMin,
+      budgetMax,
+      deliveryLocation,
+      deliveryTimeline,
+    };
+    sendRequirementAlerts(alertData).catch(err => {
+      console.error("Failed to send requirement alerts:", err);
+    });
+  }
 
   return res.status(201).json(
     new ApiResponse(201, populatedReq, "Buy requirement posted successfully")

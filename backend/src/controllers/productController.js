@@ -455,7 +455,16 @@ const getRelatedProducts = asyncHandler(async (req, res) => {
 // ⭐ GET FEATURED PRODUCTS
 // =============================================
 const getFeaturedProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({ isFeatured: true, status: "approved", isActive: true })
+  const now = new Date();
+  const products = await Product.find({
+    isFeatured: true,
+    status: "approved",
+    isActive: true,
+    $or: [
+      { featuredUntil: { $gte: now } }, // Featured until future date
+      { featuredUntil: null }, // No expiry set
+    ],
+  })
     .populate("seller", "name companyName city state isVerified avatar")
     .limit(8)
     .sort({ updatedAt: -1 });
@@ -570,6 +579,85 @@ const bulkUploadProducts = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Toggle Featured Status on Product
+ * PUT /api/products/:productId/featured
+ * Auth: Required (Seller owner only)
+ * Body: { isFeatured, durationDays }
+ */
+const toggleFeaturedStatus = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  const { isFeatured, durationDays = 30 } = req.body;
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // Check if seller owns the product
+  if (product.seller.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can only feature your own products");
+  }
+
+  let updateData = { isFeatured };
+
+  if (isFeatured) {
+    // Calculate featured until date
+    const now = new Date();
+    const featuredUntil = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    updateData.featuredUntil = featuredUntil;
+  } else {
+    // Remove featured status
+    updateData.featuredUntil = null;
+  }
+
+  const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, {
+    new: true,
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedProduct, `Product ${isFeatured ? 'featured' : 'unfeatured'} successfully`)
+  );
+});
+
+/**
+ * Get Seller's Products with Featured Options
+ * GET /api/products/seller/manage
+ * Auth: Required (Seller only)
+ */
+const getSellerProductsForFeaturing = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+
+  const { skip, limit: pageLimit, currentPage } = getPagination(page, limit);
+
+  const [products, totalProducts] = await Promise.all([
+    Product.find({ seller: req.user._id, isActive: true })
+      .select("name price isFeatured featuredUntil images city state createdAt")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageLimit),
+    Product.countDocuments({ seller: req.user._id, isActive: true }),
+  ]);
+
+  // Add isFeaturedExpired flag
+  const productsWithExpiry = products.map((p) => {
+    const obj = p.toObject();
+    obj.isFeaturedExpired =
+      obj.isFeatured && obj.featuredUntil && new Date(obj.featuredUntil) < new Date();
+    return obj;
+  });
+
+  const pagination = getPaginationMeta(totalProducts, currentPage, pageLimit);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { products: productsWithExpiry, pagination },
+      "Products fetched for featuring"
+    )
+  );
+});
+
 export {
   createProduct,
   getAllProducts,
@@ -581,4 +669,6 @@ export {
   getRelatedProducts,
   getFeaturedProducts,
   bulkUploadProducts,
+  toggleFeaturedStatus,
+  getSellerProductsForFeaturing,
 };

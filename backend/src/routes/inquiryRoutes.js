@@ -12,6 +12,10 @@ import {
   updateTemplate,
   deleteTemplate,
   pinTemplate,
+  generateQuotation,
+  getQuotations,
+  updateQuotation,
+  deleteQuotation,
 } from "../controllers/inquiryController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
@@ -101,6 +105,40 @@ router.put(
   authMiddleware,
   roleMiddleware(["seller"]),
   pinTemplate
+);
+
+// ========================================
+// QUOTATION ROUTES
+// ========================================
+// POST generate quotation
+router.post(
+  "/:inquiryId/quotations",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  generateQuotation
+);
+
+// GET quotations for an inquiry
+router.get(
+  "/:inquiryId/quotations",
+  authMiddleware,
+  getQuotations
+);
+
+// PUT update quotation
+router.put(
+  "/:inquiryId/quotations/:quotationId",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  updateQuotation
+);
+
+// DELETE quotation
+router.delete(
+  "/:inquiryId/quotations/:quotationId",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  deleteQuotation
 );
 
 export default router;

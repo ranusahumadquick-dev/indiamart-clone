@@ -161,6 +161,28 @@ const userSchema = new mongoose.Schema(
       facebook:  { type: String, trim: true, default: "" },
       instagram: { type: String, trim: true, default: "" },
     },
+
+    // --- WhatsApp Contact ---
+    whatsapp: {
+      number: {
+        type: String,
+        trim: true,
+        match: [/^[6-9]\d{9}$/, "Please enter a valid Indian WhatsApp number"],
+        default: "",
+      },
+      isVerified: { type: Boolean, default: false },
+      verifiedAt: { type: Date },
+      displayOnProfile: { type: Boolean, default: false },
+    },
+
+    // --- Requirement Alerts ---
+    requirementAlerts: {
+      enabled: { type: Boolean, default: true },
+      categories: [{ type: String, trim: true }], // Categories seller wants alerts for
+      minBudget: { type: Number, default: 0 },
+      maxBudget: { type: Number, default: 10000000 },
+      preferredLocations: [{ type: String, trim: true }], // Cities seller wants to serve
+    },
     paymentTerms: [{
       type: String,
       enum: ["advance", "lc", "dp", "da", "net30", "net60", "cod"],
@@ -214,6 +236,16 @@ const userSchema = new mongoose.Schema(
         sms: { type: Boolean, default: false },
         whatsapp: { type: Boolean, default: false },
       },
+    },
+
+    // --- Trust Score ---
+    trustScore: {
+      overall: { type: Number, min: 0, max: 5, default: 0 },
+      verification: { type: Number, min: 0, max: 1.5, default: 0 },
+      responseMetrics: { type: Number, min: 0, max: 1.5, default: 0 },
+      ratings: { type: Number, min: 0, max: 1.5, default: 0 },
+      activity: { type: Number, min: 0, max: 0.5, default: 0 },
+      lastUpdatedAt: { type: Date },
     },
   },
   {

@@ -45,6 +45,9 @@ const orderSchema = new mongoose.Schema(
     },
     buyerNote: { type: String, maxlength: 500 },
     sellerNote: { type: String, maxlength: 500 },
+    reviewRequested: { type: Boolean, default: false },
+    reviewRequestedAt: { type: Date },
+    buyerReviewedAt: { type: Date },
   },
   { timestamps: true }
 );

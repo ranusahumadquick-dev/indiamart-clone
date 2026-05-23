@@ -6,6 +6,8 @@ import app from "./app.js";
 import { seedDefaultPlans } from "./models/SubscriptionPlan.js";
 import { seedCategories } from "./utils/seedCategories.js";
 import socketHandler from "./socket/socketHandler.js";
+import { initializeReminderJob } from "./jobs/inquiryReminderJob.js";
+import { initializeFeaturedExpiryJob } from "./jobs/featuredProductExpiryJob.js";
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ const initializeSubscriptionPlans = async () => {
 
 initializeSubscriptionPlans();
 seedCategories();
+initializeReminderJob();
+initializeFeaturedExpiryJob();
 
 const server = http.createServer(app);
 

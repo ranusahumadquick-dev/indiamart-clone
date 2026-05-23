@@ -114,4 +114,124 @@ const deleteReview = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Review deleted successfully"));
 });
 
-export { createReview, getProductReviews, updateReview, deleteReview };
+// =============================================
+// 💬 CREATE REPLY — Seller replies to review
+// =============================================
+const createReply = asyncHandler(async (req, res) => {
+  const { reviewId } = req.params;
+  const { content } = req.body;
+
+  if (!content || content.trim().length === 0) {
+    throw new ApiError(400, "Reply content is required");
+  }
+
+  const review = await Review.findById(reviewId).populate("product");
+
+  if (!review) {
+    throw new ApiError(404, "Review not found");
+  }
+
+  // Check if user is the product owner (seller)
+  if (review.product.seller.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "Only the product seller can reply to reviews");
+  }
+
+  // Add reply to replies array
+  review.replies.push({
+    _id: new mongoose.Types.ObjectId(),
+    seller: req.user._id,
+    sellerName: req.user.name,
+    content: content.trim(),
+    isVerified: req.user.isVerified || false,
+  });
+
+  review.replyCount = review.replies.length;
+  await review.save();
+
+  // Create notification for review author
+  const Notification = require("../models/Notification.js").default;
+  await Notification.create({
+    user: review.user,
+    type: "review_reply",
+    title: `${req.user.name || "Seller"} replied to your review`,
+    message: `Seller replied: "${content.substring(0, 50)}..."`,
+    relatedTo: {
+      model: "Review",
+      id: reviewId,
+    },
+  });
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, review, "Reply added successfully"));
+});
+
+// =============================================
+// ✏️ UPDATE REPLY — Seller updates their reply
+// =============================================
+const updateReply = asyncHandler(async (req, res) => {
+  const { reviewId, replyId } = req.params;
+  const { content } = req.body;
+
+  if (!content || content.trim().length === 0) {
+    throw new ApiError(400, "Reply content is required");
+  }
+
+  const review = await Review.findById(reviewId).populate("product");
+
+  if (!review) {
+    throw new ApiError(404, "Review not found");
+  }
+
+  const reply = review.replies.id(replyId);
+
+  if (!reply) {
+    throw new ApiError(404, "Reply not found");
+  }
+
+  // Check if user is the one who created the reply
+  if (reply.seller.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can only edit your own replies");
+  }
+
+  reply.content = content.trim();
+  await review.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, review, "Reply updated successfully"));
+});
+
+// =============================================
+// 🗑️ DELETE REPLY — Seller deletes their reply
+// =============================================
+const deleteReply = asyncHandler(async (req, res) => {
+  const { reviewId, replyId } = req.params;
+
+  const review = await Review.findById(reviewId).populate("product");
+
+  if (!review) {
+    throw new ApiError(404, "Review not found");
+  }
+
+  const reply = review.replies.id(replyId);
+
+  if (!reply) {
+    throw new ApiError(404, "Reply not found");
+  }
+
+  // Check if user is the one who created the reply
+  if (reply.seller.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can only delete your own replies");
+  }
+
+  review.replies.id(replyId).deleteOne();
+  review.replyCount = review.replies.length;
+  await review.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Reply deleted successfully"));
+});
+
+export { createReview, getProductReviews, updateReview, deleteReview, createReply, updateReply, deleteReply };

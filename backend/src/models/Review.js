@@ -46,6 +46,25 @@ const reviewSchema = new mongoose.Schema(
       },
     ],
 
+    // --- Seller Replies ---
+    replies: [
+      {
+        _id: mongoose.Schema.Types.ObjectId,
+        seller: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        sellerName: String,
+        content: {
+          type: String,
+          maxlength: [500, "Reply cannot exceed 500 characters"],
+        },
+        createdAt: { type: Date, default: Date.now },
+        isVerified: Boolean, // Seller verification status at time of reply
+      },
+    ],
+    replyCount: { type: Number, default: 0 },
+
     // --- Status ---
     isActive: { type: Boolean, default: true },
     isVerifiedPurchase: { type: Boolean, default: false },

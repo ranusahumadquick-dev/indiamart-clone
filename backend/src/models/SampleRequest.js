@@ -63,6 +63,9 @@ const sampleRequestSchema = new mongoose.Schema(
     trackingNumber: { type: String },
     courierName: { type: String },
     estimatedDelivery: { type: Date },
+    reviewRequested: { type: Boolean, default: false },
+    reviewRequestedAt: { type: Date },
+    buyerReviewedAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -10,6 +10,8 @@ import {
   getRelatedProducts,
   getFeaturedProducts,
   bulkUploadProducts,
+  toggleFeaturedStatus,
+  getSellerProductsForFeaturing,
 } from "../controllers/productController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
@@ -49,12 +51,26 @@ router.get(
   roleMiddleware("seller"),
   getSellerProducts
 );
+// Get products for featuring
+router.get(
+  "/seller/featured/manage",
+  authMiddleware,
+  roleMiddleware("seller"),
+  getSellerProductsForFeaturing
+);
 router.put(
   "/:id",
   authMiddleware,
   roleMiddleware("seller"),
   uploadProductImages,
   updateProduct
+);
+// Toggle featured status
+router.put(
+  "/:productId/featured",
+  authMiddleware,
+  roleMiddleware("seller"),
+  toggleFeaturedStatus
 );
 router.delete(
   "/:id",

@@ -67,6 +67,33 @@ const inquirySchema = new mongoose.Schema(
     // --- Seller Reply ---
     sellerReply: { type: String, trim: true },
     repliedAt: { type: Date },
+
+    // --- Quotations ---
+    quotations: [
+      {
+        _id: mongoose.Schema.Types.ObjectId,
+        generatedAt: { type: Date, default: Date.now },
+        generatedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        pdfUrl: String,
+        deliveryDate: Date,
+        paymentTerms: String,
+        notes: String,
+        expiresAt: Date,
+        acceptedAt: Date,
+        status: {
+          type: String,
+          enum: ["pending", "accepted", "declined", "expired"],
+          default: "pending",
+        },
+      },
+    ],
+
+    // --- Follow-up Reminders ---
+    lastReminderSentAt: { type: Date },
   },
   { timestamps: true }
 );

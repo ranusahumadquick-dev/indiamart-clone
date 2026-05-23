@@ -26,6 +26,7 @@ import sourcingRoutes from "./routes/sourcingRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 
 // =============================================
 // Middleware Imports
@@ -106,6 +107,7 @@ app.use("/api/sourcing-requests", sourcingRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // =============================================
 // 404 HANDLER — Route not found

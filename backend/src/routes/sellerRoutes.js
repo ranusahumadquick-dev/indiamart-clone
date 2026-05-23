@@ -15,6 +15,9 @@ import {
   requestVerification,
   addCertificationDoc,
   deleteCertificationDoc,
+  updateWhatsappNumber,
+  toggleWhatsappVisibility,
+  updateRequirementAlerts,
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
@@ -87,6 +90,30 @@ router.delete(
   authMiddleware,
   roleMiddleware(["seller"]),
   deleteCertificationDoc
+);
+
+// PUT - Update WhatsApp number
+router.put(
+  "/me/whatsapp",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  updateWhatsappNumber
+);
+
+// PUT - Toggle WhatsApp visibility on profile
+router.put(
+  "/me/whatsapp/toggle",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  toggleWhatsappVisibility
+);
+
+// PUT - Update requirement alerts preferences
+router.put(
+  "/me/requirement-alerts",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  updateRequirementAlerts
 );
 
 // GET - Get public seller profile (no auth required)

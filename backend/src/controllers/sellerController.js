@@ -569,3 +569,91 @@ export const markReviewHelpful = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Update WhatsApp Number
+ * PUT /api/sellers/me/whatsapp
+ * Auth: Required (Seller only)
+ * Body: { number }
+ */
+export const updateWhatsappNumber = asyncHandler(async (req, res) => {
+  const { number } = req.body;
+
+  if (!number || typeof number !== "string") {
+    throw new ApiError(400, "Valid WhatsApp number is required");
+  }
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      "whatsapp.number": number.trim(),
+      "whatsapp.isVerified": false, // Reset verification when number changes
+    },
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  if (!seller) throw new ApiError(404, "Seller not found");
+
+  return res.status(200).json(
+    new ApiResponse(200, seller.whatsapp, "WhatsApp number updated successfully")
+  );
+});
+
+/**
+ * Toggle WhatsApp Visibility on Profile
+ * PUT /api/sellers/me/whatsapp/toggle
+ * Auth: Required (Seller only)
+ * Body: { displayOnProfile }
+ */
+export const toggleWhatsappVisibility = asyncHandler(async (req, res) => {
+  const { displayOnProfile } = req.body;
+
+  if (typeof displayOnProfile !== "boolean") {
+    throw new ApiError(400, "displayOnProfile must be a boolean");
+  }
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    { "whatsapp.displayOnProfile": displayOnProfile },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (!seller) throw new ApiError(404, "Seller not found");
+
+  return res.status(200).json(
+    new ApiResponse(200, { displayOnProfile: seller.whatsapp.displayOnProfile }, "WhatsApp visibility updated")
+  );
+});
+
+/**
+ * Update Requirement Alerts Preferences
+ * PUT /api/sellers/me/requirement-alerts
+ * Auth: Required (Seller only)
+ * Body: { enabled, categories, minBudget, maxBudget, preferredLocations }
+ */
+export const updateRequirementAlerts = asyncHandler(async (req, res) => {
+  const { enabled, categories, minBudget, maxBudget, preferredLocations } = req.body;
+
+  const update = {};
+  if (enabled !== undefined) update["requirementAlerts.enabled"] = enabled;
+  if (categories !== undefined) update["requirementAlerts.categories"] = categories;
+  if (minBudget !== undefined) update["requirementAlerts.minBudget"] = minBudget;
+  if (maxBudget !== undefined) update["requirementAlerts.maxBudget"] = maxBudget;
+  if (preferredLocations !== undefined) update["requirementAlerts.preferredLocations"] = preferredLocations;
+
+  if (Object.keys(update).length === 0) {
+    throw new ApiError(400, "No valid fields to update");
+  }
+
+  const seller = await User.findByIdAndUpdate(
+    req.user._id,
+    update,
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  if (!seller) throw new ApiError(404, "Seller not found");
+
+  return res.status(200).json(
+    new ApiResponse(200, seller.requirementAlerts, "Requirement alerts updated successfully")
+  );
+});
+

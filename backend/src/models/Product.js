@@ -166,6 +166,7 @@ const productSchema = new mongoose.Schema(
     // --- Status & Flags ---
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
+    featuredUntil: { type: Date }, // When featured listing expires
     isVerified: { type: Boolean, default: false },
     status: {
       type: String,
@@ -203,7 +204,8 @@ productSchema.index({ views: -1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ price: 1 });
 productSchema.index({ city: 1 });
-productSchema.index({ isFeatured: -1 });
+productSchema.index({ isFeatured: -1, featuredUntil: 1 });
+productSchema.index({ featuredUntil: 1 });
 
 // ========================================
 // HOOKS

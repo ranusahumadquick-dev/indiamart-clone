@@ -5,6 +5,8 @@ import {
   getMe,
   updateProfile,
   changePassword,
+  getNotificationPreferences,
+  updateNotificationPreferences,
 } from "../controllers/authController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import { uploadAvatar } from "../middleware/uploadMiddleware.js";

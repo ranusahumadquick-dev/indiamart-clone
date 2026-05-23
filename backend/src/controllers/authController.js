@@ -138,4 +138,45 @@ const changePassword = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, {}, "Password changed"));
 });
 
-export { registerUser, loginUser, getMe, updateProfile, changePassword };
+// =============================================
+// NOTIFICATION PREFERENCES
+// =============================================
+const getNotificationPreferences = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select("notificationPreferences");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Notification preferences fetched")
+  );
+});
+
+const updateNotificationPreferences = asyncHandler(async (req, res) => {
+  const { notificationPreferences } = req.body;
+
+  if (!notificationPreferences) {
+    throw new ApiError(400, "Notification preferences are required");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { notificationPreferences },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Notification preferences updated successfully")
+  );
+});
+
+export {
+  registerUser,
+  loginUser,
+  getMe,
+  updateProfile,
+  changePassword,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+};

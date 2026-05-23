@@ -9,7 +9,7 @@ import {
   editMessage,
 } from "../controllers/chatController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-import { uploadFiles } from "../middleware/uploadMiddleware.js";
+import { uploadProductImages } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -30,7 +30,7 @@ router.get("/conversations/:conversationId/messages", authMiddleware, getMessage
 router.post(
   "/conversations/:conversationId/messages",
   authMiddleware,
-  uploadFiles,
+  uploadProductImages,
   sendMessage
 );
 

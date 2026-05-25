@@ -56,6 +56,20 @@ const paymentSchema = new mongoose.Schema({
   },
   cancelledAt: {
     type: Date
+  },
+  invoiceNumber: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  invoiceUrl: {
+    type: String
+  },
+  invoiceGeneratedAt: {
+    type: Date
+  },
+  invoiceSentAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -187,6 +201,21 @@ paymentSchema.statics.getMonthlyRevenue = async function(year, month) {
   ]);
 
   return result[0] || { totalAmount: 0, count: 0 };
+};
+
+// Static method to generate invoice number
+paymentSchema.statics.generateInvoiceNumber = async function() {
+  const year = new Date().getFullYear();
+  const lastPayment = await this.findOne({ invoiceNumber: { $exists: true } })
+    .sort({ createdAt: -1 });
+
+  let sequence = 1;
+  if (lastPayment && lastPayment.invoiceNumber) {
+    const lastNum = parseInt(lastPayment.invoiceNumber.split('-').pop());
+    sequence = lastNum + 1;
+  }
+
+  return `INV-${year}-${String(sequence).padStart(5, '0')}`;
 };
 
 const Payment = mongoose.model('Payment', paymentSchema);

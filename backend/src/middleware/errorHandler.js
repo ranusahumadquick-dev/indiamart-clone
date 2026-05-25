@@ -17,11 +17,17 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose validation error
   if (err.name === "ValidationError") {
-    const errors = Object.values(err.errors).map((e) => e.message);
+    const errors = Object.values(err.errors).map((e) => ({
+      field: e.path,
+      message: e.message,
+      value: e.value
+    }));
+    console.error("🔴 [VALIDATION ERROR]", errors);
     return res.status(400).json({
       success: false,
       message: "Validation Failed",
-      errors,
+      errors: errors.map(e => `${e.field}: ${e.message}`),
+      details: errors
     });
   }
 

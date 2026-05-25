@@ -6,6 +6,12 @@ import asyncHandler from "../utils/asyncHandler.js";
 import Payment from "../models/Payment.js";
 import Subscription from "../models/Subscription.js";
 import { SubscriptionPlan } from "../models/SubscriptionPlan.js";
+import User from "../models/User.js";
+import { generateSellerInvoice } from "../utils/invoiceGenerator.js";
+import { htmlToPdf } from "../utils/pdfGenerator.js";
+import { invoiceEmailTemplate } from "../templates/invoiceEmail.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { checkAndDowngradeExpiredSubscriptions } from "../jobs/subscriptionExpiryJob.js";
 
 const getRazorpay = () => {
   if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === "your_razorpay_key_id_here") {
@@ -80,6 +86,50 @@ const verifyPayment = asyncHandler(async (req, res) => {
   if (!payment) throw new ApiError(404, "Payment record not found");
 
   await payment.markCompleted(razorpayPaymentId, razorpaySignature);
+
+  // Generate invoice for subscription payments
+  if (payment.paymentFor === "subscription") {
+    try {
+      const user = await User.findById(payment.userId);
+      const subscription = await Subscription.findOne({
+        paymentId: payment._id,
+        planFor: "seller"
+      }).populate("plan");
+
+      if (user && subscription && subscription.plan) {
+        // Generate invoice number
+        const invoiceNumber = await Payment.generateInvoiceNumber();
+
+        // Generate invoice HTML
+        const invoiceHtml = generateSellerInvoice(payment, user, subscription, subscription.plan);
+
+        // Convert HTML to PDF
+        const pdfResult = await htmlToPdf(invoiceHtml, invoiceNumber);
+
+        // Update payment with invoice details
+        payment.invoiceNumber = invoiceNumber;
+        payment.invoiceUrl = pdfResult.url;
+        payment.invoiceGeneratedAt = new Date();
+        await payment.save();
+
+        // Send invoice email
+        const emailHtml = invoiceEmailTemplate(user, payment, subscription.plan, subscription, pdfResult.url);
+        await sendEmail({
+          to: user.email,
+          subject: `Your IndiaMart Invoice - ${invoiceNumber}`,
+          html: emailHtml
+        });
+
+        payment.invoiceSentAt = new Date();
+        await payment.save();
+
+        console.log(`Invoice ${invoiceNumber} generated and sent to ${user.email}`);
+      }
+    } catch (err) {
+      console.error("Invoice generation error:", err);
+      // Don't fail payment verification if invoice generation fails
+    }
+  }
 
   return res.status(200).json(
     new ApiResponse(200, { verified: true, payment }, "Payment verified successfully")
@@ -248,6 +298,117 @@ const verifyBuyerPayment = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, { subscription: sub, payment }, "Subscription activated"));
 });
 
+// POST /api/payments/subscribe-seller
+// Subscribe seller to plan (free or paid)
+const subscribeSellerToPlan = asyncHandler(async (req, res) => {
+  const { planId } = req.body;
+  if (!planId) throw new ApiError(400, "planId is required");
+
+  const plan = await SubscriptionPlan.findById(planId);
+  if (!plan || plan.planFor !== "seller") throw new ApiError(404, "Seller plan not found");
+
+  // Cancel any existing seller subscription
+  await Subscription.updateMany(
+    { userId: req.user._id, planFor: "seller", status: "active" },
+    { $set: { status: "cancelled", cancelledAt: new Date() } }
+  );
+
+  if (plan.price === 0) {
+    // Free plan — activate immediately
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + plan.duration);
+
+    const sub = await Subscription.create({
+      userId: req.user._id,
+      plan: plan._id,
+      planFor: "seller",
+      status: "active",
+      startDate,
+      endDate,
+      autoRenew: false
+    });
+
+    return res.status(201).json(new ApiResponse(201, { subscription: sub }, "Free plan activated"));
+  }
+
+  // Paid plan — create Razorpay order
+  const razorpay = getRazorpay();
+  const receipt = `seller_${Date.now()}_${req.user._id.toString().slice(-6)}`;
+  const razorpayOrder = await razorpay.orders.create({
+    amount: Math.round(plan.price * 100),
+    currency: "INR",
+    receipt,
+    notes: { userId: req.user._id.toString(), paymentFor: "subscription", planId: plan._id.toString() },
+  });
+
+  const payment = await Payment.create({
+    razorpayOrderId: razorpayOrder.id,
+    userId: req.user._id,
+    amount: plan.price,
+    currency: "INR",
+    paymentFor: "subscription",
+    status: "pending",
+    metadata: { planId: plan._id, planName: plan.name }
+  });
+
+  return res.status(200).json(new ApiResponse(200, {
+    orderId: razorpayOrder.id,
+    paymentId: payment._id,
+    amount: razorpayOrder.amount,
+    currency: razorpayOrder.currency,
+    key: process.env.RAZORPAY_KEY_ID,
+    plan: { _id: plan._id, name: plan.name, price: plan.price }
+  }, "Payment order created"));
+});
+
+// POST /api/payments/verify-seller-payment
+// Verify seller subscription payment and activate subscription
+const verifySellerPayment = asyncHandler(async (req, res) => {
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, paymentId, planId } = req.body;
+
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !paymentId || !planId) {
+    throw new ApiError(400, "All payment details are required");
+  }
+
+  // Verify signature
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+    .digest("hex");
+
+  if (expectedSignature !== razorpaySignature) {
+    throw new ApiError(400, "Payment verification failed");
+  }
+
+  // Mark payment as completed
+  const payment = await Payment.findById(paymentId);
+  if (!payment) throw new ApiError(404, "Payment record not found");
+  await payment.markCompleted(razorpayPaymentId, razorpaySignature);
+
+  // Get plan details
+  const plan = await SubscriptionPlan.findById(planId);
+  if (!plan) throw new ApiError(404, "Plan not found");
+
+  // Create subscription
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + plan.duration);
+
+  const sub = await Subscription.create({
+    userId: req.user._id,
+    plan: plan._id,
+    planFor: "seller",
+    status: "active",
+    startDate,
+    endDate,
+    paymentId: payment._id,
+    autoRenew: true
+  });
+
+  return res.status(201).json(new ApiResponse(201, { subscription: sub, payment }, "Subscription activated"));
+});
+
 // POST /api/payments/cancel-subscription
 const cancelSubscription = asyncHandler(async (req, res) => {
   const { planFor } = req.body;
@@ -262,10 +423,133 @@ const cancelSubscription = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, {}, "Subscription cancelled"));
 });
 
+// GET /api/payments/invoices — List all invoices for user
+const getInvoices = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [payments, total] = await Promise.all([
+    Payment.find({
+      userId: req.user._id,
+      invoiceNumber: { $exists: true, $ne: null },
+      status: "completed"
+    })
+      .sort({ invoiceGeneratedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Payment.countDocuments({
+      userId: req.user._id,
+      invoiceNumber: { $exists: true, $ne: null },
+      status: "completed"
+    })
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      invoices: payments,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit))
+    }, "Invoices fetched")
+  );
+});
+
+// GET /api/payments/invoice/:paymentId — Download invoice PDF
+const downloadInvoice = asyncHandler(async (req, res) => {
+  const { paymentId } = req.params;
+
+  const payment = await Payment.findOne({
+    _id: paymentId,
+    userId: req.user._id,
+    invoiceNumber: { $exists: true, $ne: null }
+  });
+
+  if (!payment) throw new ApiError(404, "Invoice not found");
+  if (!payment.invoiceUrl) throw new ApiError(400, "Invoice file not available");
+
+  // In production, generate on-the-fly or serve from S3
+  // For now, assume invoiceUrl is a local path or relative URL
+  const filePath = payment.invoiceUrl;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${payment.invoiceNumber}.pdf"`);
+
+  // If invoiceUrl is a file path, read and send it
+  try {
+    const fs = await import('fs/promises');
+    const fileContent = await fs.readFile(filePath);
+    res.send(fileContent);
+  } catch (err) {
+    // If it's a URL, redirect or handle differently
+    res.redirect(filePath);
+  }
+});
+
+// POST /api/payments/resend-invoice/:paymentId — Resend invoice email
+const resendInvoiceEmail = asyncHandler(async (req, res) => {
+  const { paymentId } = req.params;
+
+  const payment = await Payment.findOne({
+    _id: paymentId,
+    userId: req.user._id,
+    invoiceNumber: { $exists: true, $ne: null }
+  });
+
+  if (!payment) throw new ApiError(404, "Invoice not found");
+
+  const user = await User.findById(payment.userId);
+  if (!user) throw new ApiError(404, "User not found");
+
+  const subscription = await Subscription.findOne({
+    paymentId: payment._id
+  }).populate("plan");
+
+  if (!subscription) throw new ApiError(404, "Subscription not found");
+
+  // Resend invoice email
+  try {
+    const emailHtml = invoiceEmailTemplate(user, payment, subscription.plan, subscription, payment.invoiceUrl);
+    await sendEmail({
+      to: user.email,
+      subject: `Your IndiaMart Invoice - ${payment.invoiceNumber}`,
+      html: emailHtml
+    });
+
+    payment.invoiceSentAt = new Date();
+    await payment.save();
+
+    return res.status(200).json(
+      new ApiResponse(200, {}, "Invoice email sent successfully")
+    );
+  } catch (err) {
+    throw new ApiError(500, "Failed to send invoice email");
+  }
+});
+
+// POST /api/payments/cron/downgrade-expired — Manual trigger for subscription expiry check (Admin only)
+const triggerSubscriptionExpiryCheck = asyncHandler(async (req, res) => {
+  // Only allow admin users
+  if (req.user.role !== "admin") {
+    throw new ApiError(403, "Only admins can trigger this endpoint");
+  }
+
+  try {
+    await checkAndDowngradeExpiredSubscriptions();
+    return res.status(200).json(
+      new ApiResponse(200, {}, "Subscription expiry check completed successfully")
+    );
+  } catch (err) {
+    throw new ApiError(500, "Error during expiry check: " + err.message);
+  }
+});
+
 export {
   createRazorpayOrder, verifyPayment, getPaymentHistory,
   getSubscriptionPlans, getBuyerPlans,
   getActiveSubscription, getBuyerSubscription,
   subscribeToBuyerPlan, verifyBuyerPayment,
-  cancelSubscription,
+  subscribeSellerToPlan, verifySellerPayment,
+  cancelSubscription, getInvoices, downloadInvoice, resendInvoiceEmail,
+  triggerSubscriptionExpiryCheck,
 };

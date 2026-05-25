@@ -8,6 +8,7 @@ import { seedCategories } from "./utils/seedCategories.js";
 import socketHandler from "./socket/socketHandler.js";
 import { initializeReminderJob } from "./jobs/inquiryReminderJob.js";
 import { initializeFeaturedExpiryJob } from "./jobs/featuredProductExpiryJob.js";
+import { scheduleExpiryJob } from "./jobs/subscriptionExpiryJob.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ initializeSubscriptionPlans();
 seedCategories();
 initializeReminderJob();
 initializeFeaturedExpiryJob();
+scheduleExpiryJob();
 
 const server = http.createServer(app);
 

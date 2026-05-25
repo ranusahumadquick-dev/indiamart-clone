@@ -15,8 +15,15 @@ import { createNotification } from "./notificationController.js";
 const createSampleRequest = asyncHandler(async (req, res) => {
   const { productId, quantity, shippingAddress, buyerNote } = req.body;
 
+  console.log("📦 [SAMPLE REQUEST] Buyer:", req.user?.email, "Product:", productId, "Qty:", quantity);
+
   if (!productId || !quantity || !shippingAddress) {
     throw new ApiError(400, "productId, quantity and shippingAddress are required");
+  }
+
+  // Validate shippingAddress object
+  if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
+    throw new ApiError(400, "All address fields (street, city, state, pincode) are required");
   }
 
   const product = await Product.findById(productId);
@@ -28,19 +35,23 @@ const createSampleRequest = asyncHandler(async (req, res) => {
   const maxQty = product.allowSamples && product.sampleMaxQty ? product.sampleMaxQty : 10000;
 
   if (quantity < minQty || quantity > maxQty) {
-    throw new ApiError(400, `Quantity must be between ${minQty} and ${maxQty}`);
+    const errorMsg = quantity < minQty
+      ? `Quantity must be at least ${minQty} units (you requested ${quantity})`
+      : `Quantity cannot exceed ${maxQty} units (you requested ${quantity})`;
+    throw new ApiError(400, errorMsg);
   }
 
   const totalAmount = unitPrice * quantity;
 
   // Auto-create a conversation between buyer and seller for this sample
   const conversation = await Conversation.create({
-    participants: [req.user._id, product.seller],
+    buyer: req.user._id,
+    seller: product.seller,
     product: product._id,
-    type: "sample",
     lastMessage: `Sample request for ${quantity} unit(s) of ${product.name}`,
     lastMessageAt: new Date(),
-    unreadCount: { [product.seller.toString()]: 1 },
+    buyerUnreadCount: 0,
+    sellerUnreadCount: 1,
   });
 
   // System message in conversation

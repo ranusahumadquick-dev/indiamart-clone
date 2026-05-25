@@ -149,7 +149,7 @@ const seedDefaultPlans = async () => {
         {
           name: 'Basic Plan',
           description: 'Ideal for small businesses starting their online presence',
-          price: 499,
+          price: 999,
           duration: 30,
           features: [
             'List up to 50 products',
@@ -180,7 +180,7 @@ const seedDefaultPlans = async () => {
         {
           name: 'Premium Plan',
           description: 'For established businesses looking to maximize reach',
-          price: 1499,
+          price: 2999,
           duration: 30,
           features: [
             'Unlimited products',

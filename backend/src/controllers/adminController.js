@@ -9,6 +9,153 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
+// ─── GET /admin/dashboard/analytics (Enhanced with period) ──────────────
+export const getDashboardAnalytics = asyncHandler(async (req, res) => {
+  const { period = "30d" } = req.query;
+
+  let daysBack = 30;
+  if (period === "7d") daysBack = 7;
+  else if (period === "90d") daysBack = 90;
+
+  const dateFrom = new Date();
+  dateFrom.setDate(dateFrom.getDate() - daysBack);
+
+  const [
+    userStats,
+    productStats,
+    revenueStats,
+    categoryStats,
+    pendingStats,
+  ] = await Promise.all([
+    // User growth
+    User.aggregate([
+      { $match: { createdAt: { $gte: dateFrom } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+          buyers: { $sum: { $cond: [{ $eq: ["$role", "buyer"] }, 1, 0] } },
+          sellers: { $sum: { $cond: [{ $eq: ["$role", "seller"] }, 1, 0] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    // Product stats
+    Product.aggregate([
+      {
+        $facet: {
+          byDay: [
+            { $match: { createdAt: { $gte: dateFrom } } },
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                count: { $sum: 1 },
+                approved: { $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] } },
+                pending: { $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] } },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+          byStatus: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+          byCategory: [
+            {
+              $group: {
+                _id: "$category",
+                count: { $sum: 1 },
+              },
+            },
+            { $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "categoryName" } },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+          ],
+        },
+      },
+    ]),
+    // Revenue stats
+    Payment.aggregate([
+      { $match: { createdAt: { $gte: dateFrom }, status: "completed" } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          amount: { $sum: "$amount" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    // Category stats
+    Category.aggregate([
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "category",
+          as: "products",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          productCount: { $size: "$products" },
+          approvedCount: {
+            $size: {
+              $filter: { input: "$products", as: "p", cond: { $eq: ["$$p.status", "approved"] } },
+            },
+          },
+          pendingCount: {
+            $size: {
+              $filter: { input: "$products", as: "p", cond: { $eq: ["$$p.status", "pending"] } },
+            },
+          },
+        },
+      },
+      { $sort: { productCount: -1 } },
+    ]),
+    // Pending actions
+    Product.aggregate([
+      {
+        $facet: {
+          pendingProducts: [{ $match: { status: "pending" } }, { $count: "count" }],
+          pendingVerifications: [
+            { $lookup: { from: "users", localField: "seller", foreignField: "_id", as: "seller" } },
+            { $match: { "seller.verificationRequested": true, "seller.isVerified": false } },
+            { $count: "count" },
+          ],
+          bannedUsers: [{ $match: { isActive: false } }, { $count: "count" }],
+        },
+      },
+    ]),
+  ]);
+
+  const pendingActionsData = pendingStats[0] || {};
+
+  res.json(
+    new ApiResponse(200, {
+      period,
+      daysBack,
+      userGrowth: userStats,
+      productStats: {
+        byDay: productStats[0]?.byDay || [],
+        byStatus: productStats[0]?.byStatus || [],
+        byCategory: productStats[0]?.byCategory || [],
+      },
+      revenueGrowth: revenueStats,
+      categoryStats,
+      pendingActions: {
+        products: pendingActionsData.pendingProducts?.[0]?.count || 0,
+        verifications: pendingActionsData.pendingVerifications?.[0]?.count || 0,
+        bannedUsers: pendingActionsData.bannedUsers?.[0]?.count || 0,
+      },
+    })
+  );
+});
+
 // ─── GET /admin/dashboard ────────────────────────────────────────────
 export const getDashboard = asyncHandler(async (req, res) => {
   const startOfMonth = new Date();
@@ -137,9 +284,81 @@ export const rejectProduct = asyncHandler(async (req, res) => {
   product.status = "rejected";
   product.isActive = false;
   product.rejectionReason = notes;
+
+  // Track approval history
+  if (!product.approvalHistory) product.approvalHistory = [];
+  product.approvalHistory.push({
+    action: "rejected",
+    adminId: req.user._id,
+    adminName: req.user.name,
+    date: new Date(),
+    notes,
+  });
+
   await product.save();
 
   res.json(new ApiResponse(200, { product }, "Product rejected"));
+});
+
+// ─── GET /admin/products/:id (Detailed view) ─────────────────────────
+export const getProductDetail = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id)
+    .populate("seller", "name companyName email phone isVerified")
+    .populate("category", "name")
+    .populate("approvalHistory.adminId", "name email");
+
+  if (!product) throw new ApiError(404, "Product not found");
+
+  res.json(new ApiResponse(200, { product }, "Product details fetched"));
+});
+
+// ─── POST /admin/products/batch-action (Bulk approve/reject) ──────────
+export const batchProductAction = asyncHandler(async (req, res) => {
+  const { action, productIds, reason } = req.body;
+
+  if (!action || !productIds || !Array.isArray(productIds) || productIds.length === 0) {
+    throw new ApiError(400, "action and productIds array are required");
+  }
+
+  if (action === "reject" && !reason) {
+    throw new ApiError(400, "reason is required for rejection");
+  }
+
+  const updateData = {
+    status: action === "approve" ? "approved" : "rejected",
+    isActive: action === "approve" ? true : false,
+  };
+
+  if (action === "reject") {
+    updateData.rejectionReason = reason;
+  } else {
+    updateData.rejectionReason = undefined;
+  }
+
+  // Add to approval history for each product
+  const products = await Product.find({ _id: { $in: productIds } });
+
+  for (const product of products) {
+    if (!product.approvalHistory) product.approvalHistory = [];
+    product.approvalHistory.push({
+      action,
+      adminId: req.user._id,
+      adminName: req.user.name,
+      date: new Date(),
+      notes: reason || "",
+    });
+
+    Object.assign(product, updateData);
+    await product.save();
+  }
+
+  res.json(
+    new ApiResponse(
+      200,
+      { updated: products.length },
+      `${products.length} products ${action === "approve" ? "approved" : "rejected"}`
+    )
+  );
 });
 
 // ─── GET /admin/users ────────────────────────────────────────────────

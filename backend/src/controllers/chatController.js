@@ -110,11 +110,12 @@ const getMessages = asyncHandler(async (req, res) => {
 // =============================================
 const sendMessage = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
-  const { text, messageType, quoteData, replyToId } = req.body;
+  const { text, messageType, quoteData, replyToId, attachments } = req.body;
   const senderId = req.user._id;
 
-  if (!text && !req.files?.length) {
-    throw new ApiError(400, "Message text or attachments required");
+  // Text is required unless attachments are provided
+  if ((!text || text.trim().length === 0) && (!attachments || attachments.length === 0)) {
+    throw new ApiError(400, "Message text or attachments are required");
   }
 
   const conversation = await Conversation.findById(conversationId);
@@ -122,17 +123,11 @@ const sendMessage = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Conversation not found");
   }
 
-  const attachments = req.files?.map((file) => ({
-    url: file.path,
-    fileName: file.originalname,
-    type: file.mimetype.startsWith("image") ? "image" : "file",
-  })) || [];
-
   const message = await Message.create({
     conversation: conversationId,
     sender: senderId,
     text: text || "",
-    attachments,
+    attachments: attachments || [],
     messageType: messageType || "text",
     quoteData: messageType === "quote_request" ? quoteData : undefined,
     replyTo: replyToId || null,

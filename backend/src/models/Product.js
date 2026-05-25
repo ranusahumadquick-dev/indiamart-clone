@@ -174,6 +174,23 @@ const productSchema = new mongoose.Schema(
       default: "approved",
     },
     rejectionReason: { type: String },
+
+    // --- Approval History ---
+    approvalHistory: [
+      {
+        action: {
+          type: String,
+          enum: ["approved", "rejected", "pending"],
+        },
+        adminId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        adminName: { type: String },
+        date: { type: Date, default: Date.now },
+        notes: { type: String },
+      },
+    ],
   },
   {
     timestamps: true,

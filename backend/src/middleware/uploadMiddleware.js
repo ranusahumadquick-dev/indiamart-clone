@@ -21,7 +21,6 @@ export const uploadProductImages = multer({
   storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB max per file
-    files: 5, // Max 5 images per product
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -32,7 +31,7 @@ export const uploadProductImages = multer({
       cb(new Error("Only JPG, PNG, and WebP images are allowed"), false);
     }
   },
-}).array("images", 5);
+}).any();
 
 /**
  * Multer upload middleware for profile/avatar images

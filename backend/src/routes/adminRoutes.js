@@ -3,9 +3,12 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
 import {
   getDashboard,
+  getDashboardAnalytics,
   getProducts,
+  getProductDetail,
   approveProduct,
   rejectProduct,
+  batchProductAction,
   getUsers,
   updateUserStatus,
   verifyUser,
@@ -24,9 +27,12 @@ router.use(authMiddleware, roleMiddleware("admin"));
 
 // Dashboard
 router.get("/dashboard", getDashboard);
+router.get("/dashboard/analytics", getDashboardAnalytics);
 
 // Product management
 router.get("/products", getProducts);
+router.get("/products/:id", getProductDetail);
+router.post("/products/batch-action", batchProductAction);
 router.patch("/products/:id/approve", approveProduct);
 router.patch("/products/:id/reject", rejectProduct);
 

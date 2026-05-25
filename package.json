@@ -20,6 +20,7 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.7"
   },
   "dependencies": {

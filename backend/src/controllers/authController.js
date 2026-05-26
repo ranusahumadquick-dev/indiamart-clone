@@ -114,7 +114,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     update.logo = req.body.logo;
   }
 
-  const user = await User.findByIdAndUpdate(req.user._id, { $set: update }, { new: true }).select(
+  const user = await User.findByIdAndUpdate(req.user._id, { $set: update }, { returnDocument: 'after' }).select(
     "-password -refreshToken"
   );
 
@@ -163,7 +163,7 @@ const updateNotificationPreferences = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { notificationPreferences },
-    { new: true }
+    { returnDocument: 'after' }
   ).select("-password -refreshToken");
 
   return res.status(200).json(
@@ -292,3 +292,4 @@ export {
   reactivateAccount,
   deleteAccountPermanently,
 };
+

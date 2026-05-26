@@ -33,7 +33,7 @@ export const addToWishlist = asyncHandler(async (req, res) => {
   await Wishlist.findOneAndUpdate(
     { user: req.user._id, product: productId },
     { user: req.user._id, product: productId },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   return res.status(200).json(new ApiResponse(200, {}, "Added to wishlist"));
@@ -84,3 +84,4 @@ export const getWishlistCollections = asyncHandler(async (req, res) => {
   const cols = await Wishlist.distinct("collectionName", { user: req.user._id });
   return res.status(200).json(new ApiResponse(200, cols.filter(Boolean), "Collections fetched"));
 });
+

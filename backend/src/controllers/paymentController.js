@@ -326,7 +326,7 @@ const subscribeSellerToPlan = asyncHandler(async (req, res) => {
       status: "active",
       startDate,
       endDate,
-      autoRenew: false
+      autoRereturnDocument: 'before'
     });
 
     return res.status(201).json(new ApiResponse(201, { subscription: sub }, "Free plan activated"));
@@ -403,7 +403,7 @@ const verifySellerPayment = asyncHandler(async (req, res) => {
     startDate,
     endDate,
     paymentId: payment._id,
-    autoRenew: true
+    autoRereturnDocument: 'after'
   });
 
   return res.status(201).json(new ApiResponse(201, { subscription: sub, payment }, "Subscription activated"));
@@ -553,3 +553,4 @@ export {
   cancelSubscription, getInvoices, downloadInvoice, resendInvoiceEmail,
   triggerSubscriptionExpiryCheck,
 };
+

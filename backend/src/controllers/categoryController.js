@@ -164,7 +164,7 @@ const updateCategory = asyncHandler(async (req, res) => {
       isActive: isActive !== undefined ? isActive : undefined,
       image: req.file?.path || undefined,
     },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!category) {
@@ -185,7 +185,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
   const category = await Category.findByIdAndUpdate(
     id,
     { isActive: false },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!category) {
@@ -205,3 +205,4 @@ export {
   updateCategory,
   deleteCategory,
 };
+

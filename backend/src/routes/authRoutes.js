@@ -35,7 +35,7 @@ router.put("/update-avatar", authMiddleware, uploadAvatar, async (req, res) => {
   const { default: ApiResponse } = await import("../utils/ApiResponse.js");
   if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
   const user = await User.findByIdAndUpdate(
-    req.user._id, { avatar: req.file.path }, { new: true }
+    req.user._id, { avatar: req.file.path }, { returnDocument: 'after' }
   ).select("-password -refreshToken");
   return res.status(200).json(new ApiResponse(200, user, "Avatar updated"));
 });
@@ -46,3 +46,4 @@ router.post("/reactivate-account", authMiddleware, reactivateAccount);
 router.post("/delete-account", authMiddleware, deleteAccountPermanently);
 
 export default router;
+

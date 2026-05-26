@@ -4,11 +4,20 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getPagination, getPaginationMeta } from "../utils/pagination.js";
 import { triggerPriceAlerts, triggerStockAlerts } from "./priceAlertController.js";
+import {
+  processUploadedImages,
+  validateImageFile,
+  getPublicImageUrls,
+  logImageOperation,
+} from "../utils/imageHandler.js";
 
 // =============================================
 // 📦 CREATE PRODUCT — Seller creates a product
 // =============================================
 const createProduct = asyncHandler(async (req, res) => {
+  console.log("🔵 [createProduct] Starting product creation...");
+  console.log("   Seller:", req.user._id);
+
   const {
     name,
     description,
@@ -34,19 +43,43 @@ const createProduct = asyncHandler(async (req, res) => {
 
   // 1. Validate required fields
   if (!name || !description || !price || !category) {
+    console.error("❌ [createProduct] Missing required fields");
     throw new ApiError(
       400,
       "Name, description, price, and category are required"
     );
   }
+  console.log("✅ [createProduct] All required fields present");
 
-  // 2. Parse images from multer upload
-  const images = req.files?.map((file) => ({
-    url: file.path,
-    publicId: file.filename,
-  })) || [];
+  // 2. Parse images from multer upload using image handler
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+
+  console.log("📤 [createProduct] Processing images...");
+  console.log("   Files received:", req.files?.length || 0);
+
+  // Validate uploaded files
+  if (req.files && req.files.length > 0) {
+    console.log("🔍 [createProduct] Validating", req.files.length, "files");
+    for (const file of req.files) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        console.error("❌ [createProduct] File validation failed:", validation.error);
+        throw new ApiError(400, validation.error);
+      }
+      console.log("✅ [createProduct] File valid:", file.originalname);
+    }
+  } else {
+    console.log("⚠️ [createProduct] No images uploaded (optional)");
+  }
+
+  const images = processUploadedImages(req.files, backendUrl);
+  console.log("✅ [createProduct] Images processed:", images.length, "images");
+  if (images.length > 0) {
+    console.log("   First image URL:", images[0].url);
+  }
 
   // 3. Create product
+  console.log("💾 [createProduct] Saving product to database...");
   const product = await Product.create({
     name,
     description,
@@ -76,6 +109,11 @@ const createProduct = asyncHandler(async (req, res) => {
     sampleMaxQty: sampleMaxQty || 5,
     sampleLeadTime: sampleLeadTime || "3-5 days",
   });
+
+  console.log("🎉 [createProduct] Product created successfully!");
+  console.log("   Product ID:", product._id);
+  console.log("   Product Name:", product.name);
+  console.log("   Images stored:", product.images.length);
 
   return res
     .status(201)
@@ -223,11 +261,31 @@ const updateProduct = asyncHandler(async (req, res) => {
     updatedData.specifications = JSON.parse(updatedData.specifications);
   }
 
+  // Handle new images if uploaded
+  if (req.files && req.files.length > 0) {
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+
+    // Validate files
+    for (const file of req.files) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        throw new ApiError(400, validation.error);
+      }
+    }
+
+    const newImages = processUploadedImages(req.files, backendUrl);
+    updatedData.images = newImages;
+    logImageOperation("product_image_update", {
+      productId: id,
+      imageCount: newImages.length,
+    });
+  }
+
   const existingProduct = await Product.findOne({ _id: id, seller: req.user._id });
   const oldPrice = existingProduct?.price;
 
   const updatedProduct = await Product.findByIdAndUpdate(id, updatedData, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   });
 
@@ -280,6 +338,7 @@ const getSellerProducts = asyncHandler(async (req, res) => {
 
   const [products, totalProducts] = await Promise.all([
     Product.find({ seller: req.user._id })
+      .populate("category", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageLimit),
@@ -612,7 +671,7 @@ const toggleFeaturedStatus = asyncHandler(async (req, res) => {
   }
 
   const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, {
-    new: true,
+    returnDocument: 'after',
   });
 
   return res.status(200).json(
@@ -672,3 +731,4 @@ export {
   toggleFeaturedStatus,
   getSellerProductsForFeaturing,
 };
+

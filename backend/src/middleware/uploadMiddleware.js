@@ -1,16 +1,37 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, "../../uploads");
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 /**
- * Configure Cloudinary storage for file uploads
+ * Configure local disk storage for file uploads
  */
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "indiamart/products",
-    allowedFormats: ["jpg", "jpeg", "png", "webp"],
-    transformation: [{ width: 800, height: 800, crop: "limit" }],
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productDir = path.join(uploadsDir, "products");
+
+    // ✅ Create folder if doesn't exist
+    if (!fs.existsSync(productDir)) {
+      fs.mkdirSync(productDir, { recursive: true });
+      console.log("📁 [Multer] Created uploads/products folder");
+    }
+
+    console.log("📤 [Multer] Saving image to:", productDir);
+    cb(null, productDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const filename = uniqueSuffix + path.extname(file.originalname);
+    console.log("✅ [Multer] Generated filename:", filename);
+    cb(null, filename);
   },
 });
 
@@ -25,9 +46,17 @@ export const uploadProductImages = multer({
   fileFilter: (req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
+    console.log("🔍 [Multer] Checking file:", {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: `${(file.size / 1024).toFixed(2)}KB`,
+    });
+
     if (allowedTypes.includes(file.mimetype)) {
+      console.log("✅ [Multer] File type accepted:", file.mimetype);
       cb(null, true);
     } else {
+      console.error("❌ [Multer] Invalid file type:", file.mimetype);
       cb(new Error("Only JPG, PNG, and WebP images are allowed"), false);
     }
   },
@@ -36,15 +65,22 @@ export const uploadProductImages = multer({
 /**
  * Multer upload middleware for profile/avatar images
  */
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const avatarDir = path.join(uploadsDir, "avatars");
+    if (!fs.existsSync(avatarDir)) {
+      fs.mkdirSync(avatarDir, { recursive: true });
+    }
+    cb(null, avatarDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
 export const uploadAvatar = multer({
-  storage: new CloudinaryStorage({
-    cloudinary,
-    params: {
-      folder: "indiamart/avatars",
-      allowedFormats: ["jpg", "jpeg", "png", "webp"],
-      transformation: [{ width: 300, height: 300, crop: "fill" }],
-    },
-  }),
+  storage: avatarStorage,
   limits: {
     fileSize: 2 * 1024 * 1024, // 2MB max
   },
@@ -65,15 +101,22 @@ export const uploadAvatar = multer({
 /**
  * Multer upload middleware for company video (mp4/mov/webm, up to 100MB)
  */
+const videoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const videoDir = path.join(uploadsDir, "videos");
+    if (!fs.existsSync(videoDir)) {
+      fs.mkdirSync(videoDir, { recursive: true });
+    }
+    cb(null, videoDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
 export const uploadVideo = multer({
-  storage: new CloudinaryStorage({
-    cloudinary,
-    params: {
-      folder: "indiamart/videos",
-      resource_type: "video",
-      allowedFormats: ["mp4", "mov", "webm", "avi"],
-    },
-  }),
+  storage: videoStorage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter: (req, file, cb) => {
     const allowed = ["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/avi"];
@@ -81,15 +124,22 @@ export const uploadVideo = multer({
   },
 }).single("video");
 
+const certificateStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const certDir = path.join(uploadsDir, "certifications");
+    if (!fs.existsSync(certDir)) {
+      fs.mkdirSync(certDir, { recursive: true });
+    }
+    cb(null, certDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
 export const uploadCertificate = multer({
-  storage: new CloudinaryStorage({
-    cloudinary,
-    params: {
-      folder: "indiamart/certifications",
-      allowedFormats: ["jpg", "jpeg", "png", "webp", "pdf"],
-      resource_type: "auto",
-    },
-  }),
+  storage: certificateStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];

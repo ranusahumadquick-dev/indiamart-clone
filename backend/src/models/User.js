@@ -247,6 +247,34 @@ const userSchema = new mongoose.Schema(
       activity: { type: Number, min: 0, max: 0.5, default: 0 },
       lastUpdatedAt: { type: Date },
     },
+
+    // --- Buyer Preferences ---
+    language: {
+      type: String,
+      enum: ["english", "hindi", "gujarati", "marathi"],
+      default: "english",
+    },
+    profilePhoto: { type: String, default: "" },
+
+    // --- Buyer Notification Settings ---
+    notificationSettings: {
+      emailAlerts: { type: Boolean, default: true },
+      whatsappAlerts: { type: Boolean, default: false },
+      smsAlerts: { type: Boolean, default: false },
+      orderUpdates: { type: Boolean, default: true },
+      priceDrops: { type: Boolean, default: true },
+      newQuotes: { type: Boolean, default: true },
+      inquiryReplies: { type: Boolean, default: true },
+      sellerMessages: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: false },
+    },
+
+    // --- Security ---
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, select: false },
+
+    // --- Wallet ---
+    walletBalance: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true,

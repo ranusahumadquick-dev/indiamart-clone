@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -250,7 +251,7 @@ export const getCompetitorInsights = asyncHandler(async (req, res) => {
   const topSellers = await Product.aggregate([
     {
       $match: {
-        category: { $in: sellerCategories.map(c => require("mongoose").Types.ObjectId(c)) },
+        category: { $in: sellerCategories.map(c => mongoose.Types.ObjectId(c)) },
         status: "approved",
         isActive: true,
         seller: { $ne: seller._id },

@@ -369,45 +369,95 @@ const paySample = asyncHandler(async (req, res) => {
 // POST /api/samples/:id/verify-pay — verify payment + auto-create Order
 const verifySamplePayment = asyncHandler(async (req, res) => {
   const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-  const sample = await SampleRequest.findById(req.params.id).populate("product", "name images");
-  if (!sample) throw new ApiError(404, "Sample request not found");
-  if (sample.buyer.toString() !== req.user._id.toString()) throw new ApiError(403, "Not authorized");
 
+  console.log("🔐 [verifySamplePayment] Payment verification started for sample:", req.params.id);
+  console.log("   Razorpay Order ID:", razorpayOrderId);
+  console.log("   Razorpay Payment ID:", razorpayPaymentId);
+
+  const sample = await SampleRequest.findById(req.params.id).populate("product", "name images");
+  if (!sample) {
+    console.error("❌ [verifySamplePayment] Sample request not found:", req.params.id);
+    throw new ApiError(404, "Sample request not found");
+  }
+
+  if (sample.buyer.toString() !== req.user._id.toString()) {
+    console.error("❌ [verifySamplePayment] Unauthorized - Buyer ID mismatch");
+    throw new ApiError(403, "Not authorized");
+  }
+
+  // Verify Razorpay signature
   const crypto = await import("crypto");
   const expectedSig = crypto.default
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest("hex");
 
-  if (expectedSig !== razorpaySignature) throw new ApiError(400, "Payment verification failed");
+  if (expectedSig !== razorpaySignature) {
+    console.error("❌ [verifySamplePayment] Signature verification failed");
+    console.error("   Expected:", expectedSig);
+    console.error("   Received:", razorpaySignature);
+    throw new ApiError(400, "Payment verification failed");
+  }
 
+  console.log("✅ [verifySamplePayment] Signature verified");
+
+  // Update payment record
   const payment = await Payment.findById(sample.paymentId);
-  if (payment) await payment.markCompleted(razorpayPaymentId, razorpaySignature);
-
-  sample.paymentStatus = "paid";
-  await sample.save();
+  if (payment) {
+    await payment.markCompleted(razorpayPaymentId, razorpaySignature);
+    console.log("✅ [verifySamplePayment] Payment marked as completed");
+  }
 
   // Auto-create Order from sample
-  const order = await Order.create({
-    buyer: sample.buyer,
-    seller: sample.seller,
-    sampleRequest: sample._id,
-    items: [{
-      product: sample.product._id,
-      name: sample.product.name,
-      image: sample.product.images?.[0]?.url || "",
-      qty: sample.quantity,
-      unitPrice: sample.unitPrice,
-      total: sample.totalAmount,
-    }],
-    totalAmount: sample.totalAmount,
-    status: "confirmed",
-    paymentId: sample.paymentId,
-    paymentStatus: "paid",
-    shippingAddress: sample.shippingAddress,
-  });
+  console.log("📋 [verifySamplePayment] Creating order from sample:");
+  console.log("   Buyer ID:", sample.buyer);
+  console.log("   Seller ID:", sample.seller);
+  console.log("   Product ID:", sample.product._id);
+  console.log("   Quantity:", sample.quantity);
+  console.log("   Total Amount:", sample.totalAmount);
 
-  return res.status(200).json(new ApiResponse(200, { sample, order }, "Payment verified and order created"));
+  let order;
+  try {
+    order = await Order.create({
+      buyer: sample.buyer,
+      seller: sample.seller,
+      sampleRequest: sample._id,
+      items: [{
+        product: sample.product._id,
+        name: sample.product.name,
+        image: sample.product.images?.[0]?.url || "",
+        qty: sample.quantity,
+        unitPrice: sample.unitPrice,
+        total: sample.totalAmount,
+      }],
+      totalAmount: sample.totalAmount,
+      status: "confirmed",
+      paymentId: sample.paymentId,
+      paymentStatus: "paid",
+      shippingAddress: sample.shippingAddress,
+    });
+
+    console.log("✅ [verifySamplePayment] Order created successfully");
+    console.log("   Order ID:", order._id);
+    console.log("   Seller ID:", order.seller);
+    console.log("   Status:", order.status);
+    console.log("   Payment Status:", order.paymentStatus);
+  } catch (orderErr) {
+    console.error("❌ [verifySamplePayment] Failed to create order:", orderErr.message);
+    console.error("   Error details:", orderErr);
+    throw new ApiError(500, "Order creation failed: " + orderErr.message);
+  }
+
+  // Mark sample as paid only after order is successfully created
+  sample.paymentStatus = "paid";
+  await sample.save();
+  console.log("✅ [verifySamplePayment] Sample marked as paid");
+
+  console.log("🎉 [verifySamplePayment] Full payment and order flow completed successfully");
+
+  return res.status(200).json(
+    new ApiResponse(200, { sample, order }, "Payment verified and order created successfully")
+  );
 });
 
 export {

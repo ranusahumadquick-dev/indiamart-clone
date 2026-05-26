@@ -423,7 +423,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { isActive },
-    { new: true, select: "-password -refreshToken" }
+    { returnDocument: 'after', select: "-password -refreshToken" }
   );
   if (!user) throw new ApiError(404, "User not found");
 
@@ -441,7 +441,7 @@ export const verifyUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     update,
-    { new: true, select: "-password -refreshToken" }
+    { returnDocument: 'after', select: "-password -refreshToken" }
   );
   if (!user) throw new ApiError(404, "User not found");
 
@@ -511,7 +511,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
   const category = await Category.findByIdAndUpdate(
     req.params.id,
     { name, description, icon, isActive },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
   if (!category) throw new ApiError(404, "Category not found");
 
@@ -526,7 +526,7 @@ export const toggleCategoryStatus = asyncHandler(async (req, res) => {
   const category = await Category.findByIdAndUpdate(
     req.params.id,
     { isActive },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!category) throw new ApiError(404, "Category not found");
 
@@ -546,3 +546,4 @@ export const deleteCategory = asyncHandler(async (req, res) => {
   await Category.findByIdAndDelete(req.params.id);
   res.json(new ApiResponse(200, {}, "Category deleted"));
 });
+

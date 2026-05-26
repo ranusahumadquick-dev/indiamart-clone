@@ -3,6 +3,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // =============================================
 // Route Imports
@@ -40,8 +42,16 @@ const app = express();
 // SECURITY MIDDLEWARE
 // =============================================
 
-// Helmet — Sets security HTTP headers
-app.use(helmet());
+// Helmet — Sets security HTTP headers with CSP allowing frontend to load images
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:8000", "https:"],
+      },
+    },
+  })
+);
 
 // =============================================
 // GLOBAL MIDDLEWARE
@@ -52,6 +62,10 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allowedHeaders: ["Content-Type", "Authorization", "Origin", "X-Requested-With"],
+    exposedHeaders: ["Content-Length", "X-JSON-Response"],
+    maxAge: 86400,
   })
 );
 
@@ -64,6 +78,88 @@ app.use(cookieParser());
 
 // Serve static files
 app.use(express.static("public"));
+
+// Serve uploaded files with CORS headers
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsPath = path.join(__dirname, "../uploads");
+
+console.log("📁 [Static Files] Uploads directory:", uploadsPath);
+
+// Add CORS headers specifically for uploaded files
+app.use("/uploads", (req, res, next) => {
+  // Remove restrictive CSP headers
+  res.removeHeader("Content-Security-Policy");
+
+  // Set CORS headers for image requests
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Vary", "Origin");
+
+  // Cache control for images
+  res.setHeader("Cache-Control", "public, max-age=86400");
+
+  // Ensure proper content type
+  if (req.path.endsWith('.jpg') || req.path.endsWith('.jpeg')) {
+    res.setHeader("Content-Type", "image/jpeg");
+  } else if (req.path.endsWith('.png')) {
+    res.setHeader("Content-Type", "image/png");
+  } else if (req.path.endsWith('.webp')) {
+    res.setHeader("Content-Type", "image/webp");
+  }
+
+  // Debug logging
+  console.log("🖼️  [Static] GET", req.method, req.path);
+  console.log("   Origin:", origin);
+
+  // Handle OPTIONS preflight requests
+  if (req.method === "OPTIONS") {
+    console.log("✅ [Static] OPTIONS request handled");
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
+// Serve static files from uploads directory
+app.use("/uploads", express.static(uploadsPath, {
+  index: false,
+  redirect: false,
+  setHeaders: (res, filePath) => {
+    // Re-apply CORS headers for static middleware
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+    res.setHeader("Vary", "Origin");
+    console.log("✅ [Static] Serving file:", filePath);
+  }
+}));
+
+// =============================================
+// IMAGE PROXY ROUTE — Serve images without CSP
+// =============================================
+app.get("/api/image-proxy", (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: "URL parameter required" });
+  }
+
+  // Security: only allow local uploads
+  if (!url.includes("/uploads/products/")) {
+    return res.status(403).json({ error: "Only uploads allowed" });
+  }
+
+  // Remove CSP header and serve file
+  res.removeHeader("Content-Security-Policy");
+  res.setHeader("Access-Control-Allow-Origin", process.env.CLIENT_URL || "http://localhost:3000");
+
+  const filename = url.split("/").pop();
+  const filepath = path.join(__dirname, "../uploads/products/", filename);
+  res.sendFile(filepath, (err) => {
+    if (err) res.status(404).json({ error: "Image not found" });
+  });
+});
 
 // =============================================
 // API HEALTH CHECK — before rate limiter

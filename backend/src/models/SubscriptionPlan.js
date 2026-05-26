@@ -338,7 +338,7 @@ const seedDefaultPlans = async () => {
       await SubscriptionPlan.findOneAndUpdate(
         { name: plan.name, planFor: 'buyer' },
         { $set: plan },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     }
     console.log('✅ Buyer subscription plans ready');

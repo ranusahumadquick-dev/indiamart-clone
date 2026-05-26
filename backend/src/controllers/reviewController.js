@@ -1,5 +1,6 @@
 import Review from "../models/Review.js";
 import Product from "../models/Product.js";
+import Notification from "../models/Notification.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -149,7 +150,6 @@ const createReply = asyncHandler(async (req, res) => {
   await review.save();
 
   // Create notification for review author
-  const Notification = require("../models/Notification.js").default;
   await Notification.create({
     user: review.user,
     type: "review_reply",

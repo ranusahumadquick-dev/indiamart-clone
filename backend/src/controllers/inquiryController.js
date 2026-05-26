@@ -379,7 +379,7 @@ const createTemplate = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     sellerId,
     { $push: { responseTemplates: { title, content, category: category || "general" } } },
-    { new: true, select: "responseTemplates" }
+    { returnDocument: 'after', select: "responseTemplates" }
   );
 
   return res.status(201).json(
@@ -425,7 +425,7 @@ const updateTemplate = asyncHandler(async (req, res) => {
     },
     {
       arrayFilters: [{ "elem._id": templateId }],
-      new: true,
+      returnDocument: 'after',
       select: "responseTemplates",
     }
   );
@@ -446,7 +446,7 @@ const deleteTemplate = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     sellerId,
     { $pull: { responseTemplates: { _id: templateId } } },
-    { new: true, select: "responseTemplates" }
+    { returnDocument: 'after', select: "responseTemplates" }
   );
 
   if (!user) {
@@ -479,7 +479,7 @@ const pinTemplate = asyncHandler(async (req, res) => {
     },
     {
       arrayFilters: [{ "elem._id": templateId }],
-      new: true,
+      returnDocument: 'after',
       select: "responseTemplates",
     }
   );
@@ -692,3 +692,4 @@ export {
   updateQuotation,
   deleteQuotation,
 };
+

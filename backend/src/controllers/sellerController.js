@@ -161,7 +161,7 @@ export const updateMySellerProfile = asyncHandler(async (req, res) => {
   const seller = await User.findByIdAndUpdate(
     req.user._id,
     { ...update, profileCompleted: true },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   const profileScore = computeProfileScore(seller);
@@ -202,7 +202,7 @@ export const completeSellerProfile = asyncHandler(async (req, res) => {
       productionCapacity,
       profileCompleted: true,
     },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   const profileScore = computeProfileScore(updatedUser);
@@ -511,7 +511,7 @@ export const addCertificationDoc = asyncHandler(async (req, res) => {
   const seller = await User.findByIdAndUpdate(
     req.user._id,
     { $push: { certificationDocs: docEntry } },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   const profileScore = computeProfileScore(seller);
@@ -530,7 +530,7 @@ export const deleteCertificationDoc = asyncHandler(async (req, res) => {
   const seller = await User.findByIdAndUpdate(
     req.user._id,
     { $pull: { certificationDocs: { _id: certId } } },
-    { new: true }
+    { returnDocument: 'after' }
   ).select("-password -refreshToken");
 
   if (!seller) throw new ApiError(404, "Seller not found");
@@ -588,7 +588,7 @@ export const updateWhatsappNumber = asyncHandler(async (req, res) => {
       "whatsapp.number": number.trim(),
       "whatsapp.isVerified": false, // Reset verification when number changes
     },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   if (!seller) throw new ApiError(404, "Seller not found");
@@ -614,7 +614,7 @@ export const toggleWhatsappVisibility = asyncHandler(async (req, res) => {
   const seller = await User.findByIdAndUpdate(
     req.user._id,
     { "whatsapp.displayOnProfile": displayOnProfile },
-    { new: true }
+    { returnDocument: 'after' }
   ).select("-password -refreshToken");
 
   if (!seller) throw new ApiError(404, "Seller not found");
@@ -647,7 +647,7 @@ export const updateRequirementAlerts = asyncHandler(async (req, res) => {
   const seller = await User.findByIdAndUpdate(
     req.user._id,
     update,
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   if (!seller) throw new ApiError(404, "Seller not found");
@@ -800,4 +800,5 @@ export const getSellerQuotaStatus = asyncHandler(async (req, res) => {
     )
   );
 });
+
 

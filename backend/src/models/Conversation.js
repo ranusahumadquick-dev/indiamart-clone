@@ -82,7 +82,8 @@ const conversationSchema = new mongoose.Schema(
 );
 
 // Index for faster queries
-conversationSchema.index({ buyer: 1, seller: 1, product: 1 }, { unique: true });
+// NOTE: Removed unique constraint to allow multiple sample requests per buyer-seller-product combo
+conversationSchema.index({ buyer: 1, seller: 1, product: 1 }); // NOT unique anymore
 conversationSchema.index({ buyer: 1, status: 1 });
 conversationSchema.index({ seller: 1, status: 1 });
 conversationSchema.index({ lastMessageTime: -1 });

@@ -34,7 +34,7 @@ export const markAsRead = asyncHandler(async (req, res) => {
   const notification = await Notification.findOneAndUpdate(
     { _id: req.params.id, user: req.user._id },
     { isRead: true },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!notification) throw new ApiError(404, "Notification not found");
   return res.status(200).json(new ApiResponse(200, notification, "Marked as read"));
@@ -67,3 +67,4 @@ export const createNotification = async ({ userId, type, title, message, link, d
     // Never throw — notification failures should not break the parent flow
   }
 };
+

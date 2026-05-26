@@ -190,7 +190,7 @@ const archiveConversation = asyncHandler(async (req, res) => {
   const conversation = await Conversation.findByIdAndUpdate(
     conversationId,
     { status: "archived" },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   return res.status(200).json(new ApiResponse(200, conversation, "Conversation archived"));
@@ -232,3 +232,4 @@ export {
   archiveConversation,
   editMessage,
 };
+

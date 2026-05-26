@@ -83,7 +83,7 @@ router.post(
     const seller = await User.findByIdAndUpdate(
       req.user._id,
       { companyVideo: req.file.path },
-      { new: true }
+      { returnDocument: 'after' }
     ).select("-password -refreshToken");
     return res.status(200).json(new ApiResponse(200, { seller }, "Video uploaded"));
   }
@@ -146,3 +146,4 @@ router.put(
 router.get("/:sellerId/trust-score", getTrustScore);
 
 export default router;
+

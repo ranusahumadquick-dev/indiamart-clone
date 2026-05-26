@@ -22,7 +22,7 @@ export const createAlert = asyncHandler(async (req, res) => {
     const alert = await PriceAlert.findOneAndUpdate(
       { user: req.user._id, product: productId, alertType: "price" },
       { targetPrice, currentPriceAtAlert: product.price, isActive: true, triggeredAt: null },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     return res.status(200).json(new ApiResponse(200, alert, "Price alert set"));
   }
@@ -31,7 +31,7 @@ export const createAlert = asyncHandler(async (req, res) => {
     const alert = await PriceAlert.findOneAndUpdate(
       { user: req.user._id, product: productId, alertType: "stock" },
       { notifyWhenInStock: true, isActive: true, triggeredAt: null },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     return res.status(200).json(new ApiResponse(200, alert, "Stock alert set"));
   }
@@ -180,3 +180,4 @@ export const triggerStockAlerts = async (productId, newStock, productName) => {
     console.warn("triggerStockAlerts error:", err?.message);
   }
 };
+

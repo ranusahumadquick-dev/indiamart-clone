@@ -26,6 +26,7 @@ const getPaginationMeta = (totalItems, currentPage, limit) => {
     currentPage,
     totalPages,
     totalItems,
+    totalProducts: totalItems,
     itemsPerPage: limit,
     hasNextPage: currentPage < totalPages,
     hasPrevPage: currentPage > 1,

@@ -467,7 +467,7 @@ export const requestCall = asyncHandler(async (req, res) => {
   await order.save();
 
   // Notify seller
-  io.to(`seller_${order.seller._id}`).emit('call:requested', {
+  io.to(`seller_${order.seller}`).emit('call:requested', {
     orderId: order._id,
     buyerName: req.user.name,
     topic,

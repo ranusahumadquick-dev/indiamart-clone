@@ -45,11 +45,8 @@ const app = express();
 // Helmet — Sets security HTTP headers with CSP allowing frontend to load images
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:8000", "https:"],
-      },
-    },
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: false,
   })
 );
 

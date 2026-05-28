@@ -2,6 +2,7 @@ import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
 import { uploadCertificate, uploadVideo } from "../middleware/uploadMiddleware.js";
+
 import {
   completeSellerProfile,
   getMySellerProfile,
@@ -15,7 +16,7 @@ import {
   requestVerification,
   addCertificationDoc,
   deleteCertificationDoc,
-  updateWhatsappNumber,
+ updateWhatsappNumber,
   toggleWhatsappVisibility,
   updateRequirementAlerts,
   getTrustScore,
@@ -23,6 +24,11 @@ import {
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
+
+// ========================================
+// IMPORTANT FIX
+// Specific routes MUST come before "/:sellerId"
+// ========================================
 
 // ========================================
 // SELLER DIRECTORY — Public listing
@@ -33,19 +39,39 @@ router.get("/", getSellers);
 // SELLER PROFILE ROUTES
 // ========================================
 
-// GET - Seller analytics (Auth required, Seller only)
-router.get("/analytics", authMiddleware, roleMiddleware(["seller"]), getSellerAnalytics);
+// GET - Seller analytics
+router.get(
+  "/analytics",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  getSellerAnalytics
+);
 
-// GET - Get own seller profile with completeness score
-router.get("/me", authMiddleware, roleMiddleware(["seller"]), getMySellerProfile);
+// GET - Get own seller profile
+router.get(
+  "/me",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  getMySellerProfile
+);
 
-// GET - Get seller's quota status (products, inquiries, featured listings)
-router.get("/me/quota-status", authMiddleware, roleMiddleware(["seller"]), getSellerQuotaStatus);
+// ✅ FIXED ROUTE
+router.get(
+  "/me/quota-status",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  getSellerQuotaStatus
+);
 
 // PUT - Update own seller profile
-router.put("/me", authMiddleware, roleMiddleware(["seller"]), updateMySellerProfile);
+router.put(
+  "/me",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  updateMySellerProfile
+);
 
-// POST - Seller completes their profile (initial onboarding)
+// POST - Complete profile
 router.post(
   "/complete-profile",
   authMiddleware,
@@ -53,7 +79,7 @@ router.post(
   completeSellerProfile
 );
 
-// POST - Seller requests platform verification (Auth required, Seller only)
+// POST - Request verification
 router.post(
   "/request-verification",
   authMiddleware,
@@ -61,7 +87,7 @@ router.post(
   requestVerification
 );
 
-// POST - Add certification document with optional file upload
+// POST - Add certification
 router.post(
   "/me/certifications",
   authMiddleware,
@@ -70,7 +96,7 @@ router.post(
   addCertificationDoc
 );
 
-// POST - Upload company video file (stored to Cloudinary)
+// POST - Upload video
 router.post(
   "/me/video",
   authMiddleware,
@@ -79,17 +105,27 @@ router.post(
   async (req, res) => {
     const { default: User } = await import("../models/User.js");
     const { default: ApiResponse } = await import("../utils/ApiResponse.js");
-    if (!req.file) return res.status(400).json({ success: false, message: "No video uploaded" });
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No video uploaded",
+      });
+    }
+
     const seller = await User.findByIdAndUpdate(
       req.user._id,
       { companyVideo: req.file.path },
-      { returnDocument: 'after' }
+      { new: true }
     ).select("-password -refreshToken");
-    return res.status(200).json(new ApiResponse(200, { seller }, "Video uploaded"));
+
+    return res.status(200).json(
+      new ApiResponse(200, { seller }, "Video uploaded")
+    );
   }
 );
 
-// DELETE - Remove a certification document
+// DELETE - Certification
 router.delete(
   "/me/certifications/:certId",
   authMiddleware,
@@ -97,7 +133,7 @@ router.delete(
   deleteCertificationDoc
 );
 
-// PUT - Update WhatsApp number
+// PUT - WhatsApp update
 router.put(
   "/me/whatsapp",
   authMiddleware,
@@ -105,7 +141,7 @@ router.put(
   updateWhatsappNumber
 );
 
-// PUT - Toggle WhatsApp visibility on profile
+// PUT - WhatsApp toggle
 router.put(
   "/me/whatsapp/toggle",
   authMiddleware,
@@ -113,7 +149,7 @@ router.put(
   toggleWhatsappVisibility
 );
 
-// PUT - Update requirement alerts preferences
+// PUT - Requirement alerts
 router.put(
   "/me/requirement-alerts",
   authMiddleware,
@@ -121,13 +157,26 @@ router.put(
   updateRequirementAlerts
 );
 
-// GET - Get public seller profile (no auth required)
-router.get("/:sellerId", getSellerProfile);
+// ========================================
+// REVIEW ROUTES
+// ========================================
 
-// GET - Get seller reviews with pagination
+// PUT - Helpful review
+router.put(
+  "/reviews/:reviewId/helpful",
+  authMiddleware,
+  markReviewHelpful
+);
+
+// ========================================
+// PUBLIC SELLER ROUTES
+// KEEP THESE LAST
+// ========================================
+
+// GET - Seller reviews
 router.get("/:sellerId/reviews", getSellerReviews);
 
-// POST - Post review for seller (Auth required, Buyer only)
+// POST - Add review
 router.post(
   "/:sellerId/reviews",
   authMiddleware,
@@ -135,15 +184,10 @@ router.post(
   postSellerReview
 );
 
-// PUT - Mark review as helpful (Auth required)
-router.put(
-  "/reviews/:reviewId/helpful",
-  authMiddleware,
-  markReviewHelpful
-);
-
-// GET - Get seller's trust score (public)
+// GET - Trust score
 router.get("/:sellerId/trust-score", getTrustScore);
 
-export default router;
+// GET - Seller profile
+router.get("/:sellerId", getSellerProfile);
 
+export default router;

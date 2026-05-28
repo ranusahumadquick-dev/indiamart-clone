@@ -189,6 +189,14 @@ const userSchema = new mongoose.Schema(
     }],
     minOrderValue: { type: Number, min: 0, default: 0 },
     productionCapacity: { type: String, trim: true, maxlength: 200, default: "" },
+
+    // --- Store Policies ---
+    storePolicy: {
+      returnPolicy: { type: String, trim: true, maxlength: 500, default: "" },
+      warrantyPolicy: { type: String, trim: true, maxlength: 500, default: "" },
+      shippingPolicy: { type: String, trim: true, maxlength: 500, default: "" },
+    },
+
     exportCountries: [{ type: String, trim: true }],
     tradeShows: [{ type: String, trim: true }],
     companyVideo: { type: String, trim: true, default: "" },   // YouTube URL or Cloudinary video

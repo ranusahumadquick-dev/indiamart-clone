@@ -55,7 +55,12 @@ const createProduct = asyncHandler(async (req, res) => {
   const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
 
   console.log("📤 [createProduct] Processing images...");
+  console.log("   req.files type:", typeof req.files);
+  console.log("   req.files is Array:", Array.isArray(req.files));
   console.log("   Files received:", req.files?.length || 0);
+  if (req.files && req.files.length > 0) {
+    console.log("   File details:", req.files.map(f => ({ name: f.originalname, path: f.path, size: f.size })));
+  }
 
   // Validate uploaded files
   if (req.files && req.files.length > 0) {
@@ -72,10 +77,15 @@ const createProduct = asyncHandler(async (req, res) => {
     console.log("⚠️ [createProduct] No images uploaded (optional)");
   }
 
+  console.log("📦 [createProduct] About to call processUploadedImages with:");
+  console.log("   Backend URL:", backendUrl);
   const images = processUploadedImages(req.files, backendUrl);
   console.log("✅ [createProduct] Images processed:", images.length, "images");
   if (images.length > 0) {
     console.log("   First image URL:", images[0].url);
+    console.log("   First image full object:", JSON.stringify(images[0], null, 2));
+  } else {
+    console.log("⚠️ [createProduct] No images returned from processUploadedImages!");
   }
 
   // 3. Create product

@@ -38,7 +38,7 @@ const createInquiry = asyncHandler(async (req, res) => {
     buyerEmail: req.user.email,
     buyerPhone: req.user.phone,
     product: productId,
-    seller: product.seller._id,
+    seller: product.seller?._id,
     subject,
     message,
     quantityRequired,

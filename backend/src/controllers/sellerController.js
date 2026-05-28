@@ -234,6 +234,7 @@ export const getSellerProfile = asyncHandler(async (req, res) => {
     status: "approved",
   })
     .select("name slug price comparePrice images category subCategory averageRating stock minOrderQuantity city state")
+    .populate("category", "name")
     .lean();
 
   // Get all reviews for this seller

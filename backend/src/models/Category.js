@@ -32,6 +32,21 @@ const categorySchema = new mongoose.Schema(
       ref: "Category",
       default: null,
     },
+    variantTemplates: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        values: [
+          {
+            type: String,
+            trim: true,
+          },
+        ],
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,

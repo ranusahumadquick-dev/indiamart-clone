@@ -106,6 +106,53 @@ const getCategoryTree = asyncHandler(async (req, res) => {
 });
 
 // =============================================
+// 📂 GET SINGLE CATEGORY — Public (by ID)
+// =============================================
+const getCategoryById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const category = await Category.findById(id).populate("subcategories");
+
+  if (!category || !category.isActive) {
+    throw new ApiError(404, "Category not found");
+  }
+
+  console.log(`📌 [getCategoryById] Fetched category: ${category.name}`);
+  console.log(`   Has variantTemplates: ${category.variantTemplates?.length || 0}`);
+  if (category.variantTemplates?.length > 0) {
+    console.log(`   variantTemplates:`, JSON.stringify(category.variantTemplates, null, 2));
+  }
+
+  // If this is a parent category, also count products in subcategories
+  let totalProducts = 0;
+  const subCategoryIds = category.subcategories.map((sub) => sub._id);
+  const categoryIds = [category._id, ...subCategoryIds];
+
+  totalProducts = await Product.countDocuments({
+    category: { $in: categoryIds },
+    isActive: true,
+  });
+
+  // Get parent info if this is a subcategory
+  let parentCategory = null;
+  if (category.parentCategory) {
+    parentCategory = await Category.findById(category.parentCategory).lean();
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        ...category.toObject(),
+        totalProducts,
+        parentCategory,
+      },
+      "Category fetched successfully"
+    )
+  );
+});
+
+// =============================================
 // 📂 GET SINGLE CATEGORY — Public (by slug)
 // =============================================
 const getCategoryBySlug = asyncHandler(async (req, res) => {
@@ -201,6 +248,7 @@ export {
   createCategory,
   getAllCategories,
   getCategoryTree,
+  getCategoryById,
   getCategoryBySlug,
   updateCategory,
   deleteCategory,

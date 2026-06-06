@@ -39,6 +39,8 @@ const createProduct = asyncHandler(async (req, res) => {
     sampleMinQty,
     sampleMaxQty,
     sampleLeadTime,
+    variantTypes,
+    variants,
   } = req.body;
 
   // 1. Validate required fields
@@ -90,7 +92,27 @@ const createProduct = asyncHandler(async (req, res) => {
 
   // 3. Create product
   console.log("💾 [createProduct] Saving product to database...");
-  const product = await Product.create({
+
+  // Parse variant data
+  const parsedVariantTypes = variantTypes
+    ? typeof variantTypes === "string"
+      ? JSON.parse(variantTypes)
+      : variantTypes
+    : [];
+  const parsedVariants = variants
+    ? typeof variants === "string"
+      ? JSON.parse(variants)
+      : variants
+    : [];
+
+  console.log("   📋 variantTypes:", JSON.stringify(parsedVariantTypes, null, 2));
+  console.log("   📋 variants count:", parsedVariants.length);
+  if (parsedVariants.length > 0) {
+    console.log("   📋 variants (first 2):", JSON.stringify(parsedVariants.slice(0, 2), null, 2));
+  }
+
+  // Create product
+  let product = await Product.create({
     name,
     description,
     price,
@@ -118,10 +140,28 @@ const createProduct = asyncHandler(async (req, res) => {
     sampleMinQty: sampleMinQty || 1,
     sampleMaxQty: sampleMaxQty || 5,
     sampleLeadTime: sampleLeadTime || "3-5 days",
+    variantTypes: parsedVariantTypes,
+    variants: parsedVariants,
+    hasVariants: parsedVariants.length > 0,
   });
+
+  // If no variants provided, populate categories and trigger auto-generation
+  if ((!parsedVariantTypes || parsedVariantTypes.length === 0) && category) {
+    console.log("🔄 [Auto-Variants] Re-fetching product to populate category for auto-variant generation...");
+    product = await Product.findById(product._id)
+      .populate("category")
+      .populate("subCategory");
+    console.log(`📦 [Auto-Variants] Category populated: ${product.category?.name || product.category}, SubCategory: ${product.subCategory?.name || "N/A"}`);
+    // Save to trigger pre("save") hook for auto-variant generation
+    product = await product.save();
+    console.log(`✅ [Auto-Variants] Post-save: hasVariants=${product.hasVariants}, variantCount=${product.variants?.length || 0}`);
+  }
 
   console.log("🎉 [createProduct] Product created successfully!");
   console.log("   Product ID:", product._id);
+  console.log("   Has Variants:", product.hasVariants);
+  console.log("   Variant Types Count:", product.variantTypes?.length || 0);
+  console.log("   Variants Count:", product.variants?.length || 0);
   console.log("   Product Name:", product.name);
   console.log("   Images stored:", product.images.length);
 
@@ -237,12 +277,45 @@ const getSingleProduct = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Product not found");
   }
 
+  console.log("🔍 [getSingleProduct] Fetched product:", product.name);
+  console.log("   Has Variants:", product.hasVariants);
+  console.log("   Variant Types Count:", product.variantTypes?.length || 0);
+  console.log("   Variants Count:", product.variants?.length || 0);
+  if (product.variantTypes?.length > 0) {
+    console.log("   First variantType:", JSON.stringify(product.variantTypes[0], null, 2));
+  }
+  if (product.variants?.length > 0) {
+    console.log("   First variant:", JSON.stringify(product.variants[0], null, 2));
+  }
+
+  // Transform product to ensure proper serialization
+  let transformedProduct = product.toObject ? product.toObject() : JSON.parse(JSON.stringify(product));
+
+  // Transform variants to include 'id' field and properly serialize attributeValues
+  if (transformedProduct.variants && Array.isArray(transformedProduct.variants)) {
+    transformedProduct.variants = transformedProduct.variants.map((v, idx) => {
+      // Convert Map to object if needed
+      const attributeValues = v.attributeValues instanceof Map
+        ? Object.fromEntries(v.attributeValues)
+        : (v.attributeValues || {});
+
+      // Use SKU as ID if available, otherwise use index
+      const variantId = v.sku || `variant-${idx}`;
+
+      return {
+        ...v,
+        attributeValues,
+        id: variantId,
+      };
+    });
+  }
+
   // Increment view count
   await Product.findByIdAndUpdate(id, { $inc: { views: 1 } });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, product, "Product fetched successfully"));
+    .json(new ApiResponse(200, transformedProduct, "Product fetched successfully"));
 });
 
 // =============================================
@@ -271,6 +344,19 @@ const updateProduct = asyncHandler(async (req, res) => {
     updatedData.specifications = JSON.parse(updatedData.specifications);
   }
 
+  // Parse variants and variantTypes if they come as strings
+  if (updatedData.variantTypes && typeof updatedData.variantTypes === "string") {
+    updatedData.variantTypes = JSON.parse(updatedData.variantTypes);
+  }
+  if (updatedData.variants && typeof updatedData.variants === "string") {
+    updatedData.variants = JSON.parse(updatedData.variants);
+  }
+
+  // Set hasVariants based on variants array
+  if (updatedData.variants) {
+    updatedData.hasVariants = Array.isArray(updatedData.variants) && updatedData.variants.length > 0;
+  }
+
   // Handle new images if uploaded
   if (req.files && req.files.length > 0) {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
@@ -291,13 +377,79 @@ const updateProduct = asyncHandler(async (req, res) => {
     });
   }
 
-  const existingProduct = await Product.findOne({ _id: id, seller: req.user._id });
+  const existingProduct = await Product.findOne({ _id: id, seller: req.user._id })
+    .populate("category")
+    .populate("subCategory");
   const oldPrice = existingProduct?.price;
 
-  const updatedProduct = await Product.findByIdAndUpdate(id, updatedData, {
-    returnDocument: 'after',
-    runValidators: true,
-  });
+  // Update product fields
+  Object.assign(existingProduct, updatedData);
+
+  // AUTO-GENERATE VARIANTS if empty
+  if ((!existingProduct.variantTypes || existingProduct.variantTypes.length === 0) && existingProduct.category) {
+    console.log("🔧 [updateProduct] Auto-generating variants for:", existingProduct.name);
+
+    // Generate default variants for ANY product
+    const defaultTemplates = [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue"] },
+      { name: "Variant", values: ["Standard","Premium","Deluxe"] }
+    ];
+
+    // Transform to variantTypes
+    existingProduct.variantTypes = defaultTemplates.map(template => ({
+      name: template.name,
+      type: "dropdown",
+      values: template.values.map(value => ({
+        label: value,
+        value: value.toLowerCase().replace(/\s+/g, "-")
+      }))
+    }));
+
+    // Generate combinations
+    const skuPrefix = existingProduct.name?.substring(0, 3).toUpperCase().replace(/\s/g, "") || "SKU";
+    const combinations = [];
+    let combos = [{}];
+
+    for (const vt of defaultTemplates) {
+      const newCombos = [];
+      for (const existing of combos) {
+        for (const value of vt.values) {
+          newCombos.push({ ...existing, [vt.name]: value });
+        }
+      }
+      combos = newCombos;
+    }
+
+    const totalCombos = combos.length;
+    const stockPerVariant = totalCombos > 0 ? Math.floor((existingProduct.stock || 0) / totalCombos) : 0;
+
+    existingProduct.variants = combos.map((attrs, index) => {
+      const attrPart = Object.values(attrs)
+        .map(v => v.substring(0, 3).toUpperCase().replace(/\s/g, ""))
+        .join("-");
+
+      return {
+        sku: `${skuPrefix}-${attrPart}-${String(index + 1).padStart(3, "0")}`,
+        name: Object.values(attrs).join(" - "),
+        attributeValues: new Map(Object.entries(attrs)),
+        images: [],
+        thumbnail: "",
+        price: existingProduct.price || 0,
+        originalPrice: existingProduct.price || 0,
+        stock: stockPerVariant,
+        moq: 1,
+        specifications: [],
+        available: stockPerVariant > 0,
+      };
+    });
+
+    existingProduct.hasVariants = true;
+    console.log(`✅ [updateProduct] Generated ${existingProduct.variants.length} variants`);
+  }
+
+  // Save with variants
+  const updatedProduct = await existingProduct.save({ validateBeforeSave: true });
 
   // Trigger price alerts if price was lowered
   if (updatedData.price && oldPrice && updatedData.price < oldPrice) {

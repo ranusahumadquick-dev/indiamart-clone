@@ -1,5 +1,421 @@
 import mongoose from "mongoose";
 
+// ╔═════════════════════════════════════════════════════════════════╗
+// ║              AUTO-VARIANT GENERATION MAPPING                   ║
+// ║  Category-based automatic variant templates                    ║
+// ╚═════════════════════════════════════════════════════════════════╝
+
+const AUTO_VARIANTS = {
+  // ─── FOOD & BEVERAGES ──────────────────────────────
+  food: {
+    default: [
+      { name: "Weight", values: ["100g","250g","500g","1kg","2kg","5kg"] },
+      { name: "Pack Type", values: ["Loose","Packet","Box","Jar","Pouch"] },
+      { name: "Grade", values: ["Regular","Premium","Organic"] }
+    ],
+    "grains & pulses": [
+      { name: "Weight", values: ["250g","500g","1kg","2kg","5kg","10kg","25kg"] },
+      { name: "Pack Type", values: ["Loose","Sealed Packet","Vacuum Pack","Jute Bag"] },
+      { name: "Grade", values: ["Regular","Premium","Organic","Export Quality"] }
+    ],
+    dairy: [
+      { name: "Quantity", values: ["100ml","200ml","500ml","1L","2L","5L"] },
+      { name: "Fat %", values: ["Skimmed","Low Fat","Full Cream","Double Cream"] },
+      { name: "Pack", values: ["Pouch","Bottle","Tetrapack","Jar"] }
+    ],
+    spices: [
+      { name: "Weight", values: ["50g","100g","200g","500g","1kg"] },
+      { name: "Form", values: ["Whole","Powder","Paste","Flakes"] },
+      { name: "Grade", values: ["Regular","Premium","Organic"] }
+    ],
+    beverages: [
+      { name: "Volume", values: ["200ml","250ml","500ml","750ml","1L","2L"] },
+      { name: "Type", values: ["Regular","Diet","Zero Sugar","Decaf"] },
+      { name: "Pack", values: ["Bottle","Can","Tetrapack","Sachet"] }
+    ],
+    snacks: [
+      { name: "Weight", values: ["50g","100g","200g","500g"] },
+      { name: "Flavor", values: ["Plain","Spicy","Sweet","Salty","Tangy"] },
+      { name: "Pack", values: ["Single","Pack of 2","Pack of 5","Family Pack"] }
+    ],
+    sweets: [
+      { name: "Weight", values: ["250g","500g","1kg","2kg"] },
+      { name: "Flavor", values: ["Kaju","Badam","Pista","Mixed","Chocolate"] },
+      { name: "Pack", values: ["Box","Loose","Gift Pack","Tin"] }
+    ],
+    "dry fruits": [
+      { name: "Weight", values: ["100g","250g","500g","1kg"] },
+      { name: "Grade", values: ["Regular","Premium","Export Quality"] },
+      { name: "Pack", values: ["Pouch","Box","Jar","Tin"] }
+    ]
+  },
+
+  // ─── AGRICULTURE ───────────────────────────────────
+  agriculture: {
+    default: [
+      { name: "Weight", values: ["500g","1kg","5kg","10kg"] },
+      { name: "Grade", values: ["A Grade","B Grade","Organic"] },
+      { name: "Season", values: ["Kharif","Rabi","All Season"] }
+    ],
+    fruits: [
+      { name: "Weight", values: ["500g","1kg","2kg","5kg","10kg"] },
+      { name: "Grade", values: ["A Grade","B Grade","Export Quality","Local"] },
+      { name: "Variety", values: ["Local","Hybrid","Organic","Imported"] }
+    ],
+    vegetables: [
+      { name: "Weight", values: ["250g","500g","1kg","2kg","5kg"] },
+      { name: "Type", values: ["Fresh","Organic","Hydroponic","Farm Direct"] },
+      { name: "Pack", values: ["Loose","Net Bag","Crate","Box"] }
+    ],
+    seeds: [
+      { name: "Weight", values: ["50g","100g","250g","500g","1kg"] },
+      { name: "Variety", values: ["Hybrid","Open Pollinated","Heirloom","Organic"] },
+      { name: "Season", values: ["Kharif","Rabi","Zaid","All Season"] }
+    ],
+    fertilizers: [
+      { name: "Weight", values: ["1kg","5kg","10kg","25kg","50kg"] },
+      { name: "Type", values: ["Organic","Chemical","Bio","Granular","Liquid"] },
+      { name: "NPK Ratio", values: ["10-10-10","12-32-16","19-19-19","Custom"] }
+    ],
+    pesticides: [
+      { name: "Volume/Weight", values: ["100ml","250ml","500ml","1L","1kg"] },
+      { name: "Type", values: ["Organic","Chemical","Bio-Pesticide"] },
+      { name: "Target", values: ["Insecticide","Fungicide","Herbicide","All Purpose"] }
+    ],
+    herbs: [
+      { name: "Weight", values: ["50g","100g","250g","500g"] },
+      { name: "Form", values: ["Fresh","Dried","Powdered","Extract"] },
+      { name: "Grade", values: ["Regular","Organic","Medicinal"] }
+    ],
+    flowers: [
+      { name: "Quantity", values: ["10 pcs","25 pcs","50 pcs","100 pcs"] },
+      { name: "Grade", values: ["A Grade","B Grade","Export Quality"] },
+      { name: "Pack", values: ["Loose","Bunch","Box"] }
+    ]
+  },
+
+  // ─── CLOTHING & APPAREL ────────────────────────────
+  clothing: {
+    default: [
+      { name: "Size", values: ["XS","S","M","L","XL","XXL"] },
+      { name: "Color", values: ["White","Black","Red","Blue","Green"] },
+      { name: "Material", values: ["Cotton","Polyester","Linen"] }
+    ],
+    men: [
+      { name: "Size", values: ["XS","S","M","L","XL","XXL","3XL"] },
+      { name: "Color", values: ["White","Black","Navy","Grey","Brown","Olive"] },
+      { name: "Fit", values: ["Regular","Slim","Relaxed","Oversized"] },
+      { name: "Material", values: ["Cotton","Polyester","Linen","Blended"] }
+    ],
+    women: [
+      { name: "Size", values: ["XS","S","M","L","XL","XXL"] },
+      { name: "Color", values: ["White","Black","Red","Pink","Blue","Yellow"] },
+      { name: "Style", values: ["Casual","Formal","Party","Ethnic"] },
+      { name: "Material", values: ["Cotton","Chiffon","Silk","Polyester"] }
+    ],
+    kids: [
+      { name: "Age Group", values: ["0-1yr","1-2yr","2-4yr","4-6yr","6-8yr","8-10yr","10-12yr"] },
+      { name: "Color", values: ["Red","Blue","Yellow","Green","Pink","Orange"] },
+      { name: "Material", values: ["Soft Cotton","Fleece","Denim","Jersey"] }
+    ],
+    traditional: [
+      { name: "Size", values: ["XS","S","M","L","XL","XXL"] },
+      { name: "Color", values: ["Red","Green","Yellow","Blue","Maroon","Orange","White"] },
+      { name: "Work", values: ["Plain","Embroidered","Printed","Zari","Bandhani"] },
+      { name: "Fabric", values: ["Cotton","Silk","Georgette","Crepe","Rayon"] }
+    ],
+    sportswear: [
+      { name: "Size", values: ["XS","S","M","L","XL","XXL"] },
+      { name: "Color", values: ["Black","White","Blue","Red","Green","Yellow"] },
+      { name: "Material", values: ["Dri-Fit","Polyester","Spandex","Mesh"] }
+    ],
+    winter: [
+      { name: "Size", values: ["S","M","L","XL","XXL","3XL"] },
+      { name: "Color", values: ["Black","Navy","Grey","Brown","Maroon","Camel"] },
+      { name: "Material", values: ["Wool","Fleece","Down","Acrylic","Blended"] },
+      { name: "Thickness", values: ["Light","Medium","Heavy","Extra Heavy"] }
+    ],
+    "synthetic fabric": [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue","Green"] },
+      { name: "Material", values: ["Polyester","Nylon","Acrylic","Microfiber","Blended"] },
+      { name: "Finish", values: ["Matte","Glossy","Water-Resistant","Quick-Dry"] }
+    ],
+    bags: [
+      { name: "Size", values: ["Small","Medium","Large","Extra Large"] },
+      { name: "Color", values: ["Black","Grey","Navy","Brown","Tan","White"] },
+      { name: "Material", values: ["Polyester","Nylon","Canvas","Leather","Synthetic"] },
+      { name: "Type", values: ["Backpack","Laptop Bag","Travel Bag","School Bag"] }
+    ]
+  },
+
+  // ─── FOOTWEAR ──────────────────────────────────────
+  footwear: {
+    default: [
+      { name: "Size (UK)", values: ["5","6","7","8","9","10","11"] },
+      { name: "Color", values: ["Black","Brown","White","Grey"] },
+      { name: "Material", values: ["Leather","Synthetic","Canvas","Mesh"] }
+    ],
+    men: [
+      { name: "Size (UK)", values: ["6","7","8","9","10","11","12"] },
+      { name: "Color", values: ["Black","Brown","White","Tan","Navy"] },
+      { name: "Type", values: ["Formal","Casual","Sports","Sandal","Slipper"] }
+    ],
+    women: [
+      { name: "Size (UK)", values: ["3","4","5","6","7","8"] },
+      { name: "Color", values: ["Black","White","Nude","Red","Pink","Gold"] },
+      { name: "Heel", values: ["Flat","Low Heel","Mid Heel","High Heel","Wedge"] }
+    ],
+    kids: [
+      { name: "Size (UK)", values: ["1","2","3","4","5","6","7","8"] },
+      { name: "Color", values: ["Black","White","Blue","Red","Pink","Yellow"] },
+      { name: "Type", values: ["School","Sports","Casual","Sandal"] }
+    ]
+  },
+
+  // ─── ELECTRONICS ───────────────────────────────────
+  electronics: {
+    default: [
+      { name: "Color", values: ["Black","White","Silver","Space Grey"] },
+      { name: "Variant", values: ["Standard","Plus","Pro","Max"] },
+      { name: "Warranty", values: ["6 Months","1 Year","2 Years"] }
+    ],
+    mobile: [
+      { name: "Storage", values: ["64GB","128GB","256GB","512GB","1TB"] },
+      { name: "RAM", values: ["4GB","6GB","8GB","12GB","16GB"] },
+      { name: "Color", values: ["Black","White","Blue","Gold","Silver","Green"] }
+    ],
+    laptop: [
+      { name: "RAM", values: ["4GB","8GB","16GB","32GB","64GB"] },
+      { name: "Storage", values: ["256GB SSD","512GB SSD","1TB HDD","1TB SSD","2TB"] },
+      { name: "Screen", values: ["13 inch","14 inch","15.6 inch","17 inch"] },
+      { name: "OS", values: ["Windows 11","macOS","Linux","Chrome OS"] }
+    ],
+    audio: [
+      { name: "Type", values: ["In-Ear","On-Ear","Over-Ear","Neckband","Speaker"] },
+      { name: "Connectivity", values: ["Wired","Bluetooth","2.4GHz","Hybrid"] },
+      { name: "Color", values: ["Black","White","Blue","Red","Grey"] }
+    ],
+    tv: [
+      { name: "Screen Size", values: ["32 inch","43 inch","50 inch","55 inch","65 inch","75 inch"] },
+      { name: "Resolution", values: ["HD","Full HD","4K","8K"] },
+      { name: "Type", values: ["LED","OLED","QLED","AMOLED"] }
+    ],
+    camera: [
+      { name: "Type", values: ["DSLR","Mirrorless","Point & Shoot","Action","Security"] },
+      { name: "Resolution", values: ["12MP","24MP","48MP","64MP","108MP"] },
+      { name: "Color", values: ["Black","Silver","White"] }
+    ],
+    accessories: [
+      { name: "Color", values: ["Black","White","Blue","Red","Green","Grey"] },
+      { name: "Compatibility", values: ["Universal","iOS","Android","Windows"] },
+      { name: "Pack", values: ["Single","Pack of 2","Pack of 3","Combo"] }
+    ]
+  },
+
+  // ─── FURNITURE & HOME ──────────────────────────────
+  furniture: {
+    default: [
+      { name: "Size", values: ["Small","Medium","Large","XL","Custom"] },
+      { name: "Color/Finish", values: ["Walnut","Oak","White","Black","Natural Wood"] },
+      { name: "Material", values: ["Solid Wood","Plywood","MDF","Metal","Rattan"] }
+    ],
+    "living room": [
+      { name: "Size", values: ["2 Seater","3 Seater","L Shape","U Shape"] },
+      { name: "Color", values: ["Beige","Grey","Brown","Navy","Green","Cream"] },
+      { name: "Material", values: ["Fabric","Leather","Velvet","Rexine"] }
+    ],
+    bedroom: [
+      { name: "Size", values: ["Single","Double","Queen","King","Super King"] },
+      { name: "Color/Finish", values: ["Walnut","White","Oak","Grey","Wenge"] },
+      { name: "Material", values: ["Solid Wood","Engineered Wood","Metal","Upholstered"] },
+      { name: "Storage", values: ["Without Storage","With Storage","Hydraulic","Drawer"] }
+    ],
+    office: [
+      { name: "Size", values: ["Small","Medium","Large","L Shape","U Shape"] },
+      { name: "Color", values: ["Black","White","Walnut","Grey","Oak"] },
+      { name: "Material", values: ["MDF","Solid Wood","Metal","Glass Top"] }
+    ]
+  },
+
+  // ─── COSMETICS & BEAUTY ────────────────────────────
+  cosmetics: {
+    default: [
+      { name: "Size", values: ["30ml","50ml","100ml","200ml"] },
+      { name: "Type", values: ["Regular","Organic","Herbal","Medicated"] },
+      { name: "Skin Type", values: ["Oily","Dry","Normal","All Types"] }
+    ],
+    skincare: [
+      { name: "Size", values: ["15ml","30ml","50ml","75ml","100ml","200ml"] },
+      { name: "Skin Type", values: ["Oily","Dry","Normal","Combination","Sensitive"] },
+      { name: "SPF", values: ["No SPF","SPF 15","SPF 30","SPF 50","SPF 50+"] }
+    ],
+    makeup: [
+      { name: "Shade", values: ["Fair","Light","Medium","Tan","Deep","Rich"] },
+      { name: "Finish", values: ["Matte","Dewy","Satin","Glossy","Natural"] },
+      { name: "Size", values: ["Mini","Regular","Full Size","Value Pack"] }
+    ],
+    haircare: [
+      { name: "Size", values: ["100ml","200ml","400ml","500ml","1L"] },
+      { name: "Hair Type", values: ["Oily","Dry","Normal","Damaged","Curly","Color Treated"] },
+      { name: "Type", values: ["Regular","Organic","Anti-Dandruff","Keratin","Volumizing"] }
+    ],
+    fragrances: [
+      { name: "Size", values: ["30ml","50ml","75ml","100ml","150ml","200ml"] },
+      { name: "Type", values: ["EDP","EDT","Perfume","Body Mist","Deodorant"] },
+      { name: "Gender", values: ["Men","Women","Unisex"] }
+    ]
+  },
+
+  // ─── HARDWARE & TOOLS ──────────────────────────────
+  hardware: {
+    default: [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Material", values: ["Steel","Aluminium","Plastic","Iron","Brass"] },
+      { name: "Grade", values: ["Standard","Professional","Industrial"] }
+    ],
+    "hand tools": [
+      { name: "Size", values: ["Small","Medium","Large","Heavy Duty"] },
+      { name: "Material", values: ["Chrome Vanadium","Carbon Steel","HSS","Alloy Steel"] },
+      { name: "Set", values: ["Single","Set of 5","Set of 10","Complete Set"] }
+    ],
+    "power tools": [
+      { name: "Voltage", values: ["12V","18V","20V","110V","220V"] },
+      { name: "Grade", values: ["DIY","Professional","Industrial"] },
+      { name: "Color", values: ["Black","Yellow","Blue","Red","Green"] }
+    ],
+    paints: [
+      { name: "Volume", values: ["1L","4L","10L","20L"] },
+      { name: "Finish", values: ["Matte","Satin","Semi-Gloss","Gloss","Enamel"] },
+      { name: "Type", values: ["Interior","Exterior","Waterproof","Heat Resistant"] }
+    ]
+  },
+
+  // ─── SPORTS & FITNESS ──────────────────────────────
+  sports: {
+    default: [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Color", values: ["Black","Blue","Red","Green","White"] },
+      { name: "Grade", values: ["Beginner","Intermediate","Professional"] }
+    ],
+    cricket: [
+      { name: "Size", values: ["Size 3","Size 4","Size 5","Size 6","Full Size"] },
+      { name: "Grade", values: ["Tennis Ball","Leather","Club","International"] },
+      { name: "Color", values: ["Red","White","Pink","Yellow"] }
+    ],
+    gym: [
+      { name: "Weight", values: ["1kg","2kg","5kg","10kg","15kg","20kg","25kg"] },
+      { name: "Material", values: ["Cast Iron","Rubber Coated","Chrome","Neoprene"] },
+      { name: "Set", values: ["Single","Pair","Set of 3","Full Set"] }
+    ],
+    yoga: [
+      { name: "Size", values: ["Standard","Large","Extra Large"] },
+      { name: "Thickness", values: ["3mm","4mm","6mm","8mm","10mm"] },
+      { name: "Color", values: ["Blue","Purple","Green","Black","Pink","Orange"] }
+    ],
+    cycling: [
+      { name: "Size", values: ["XS","S","M","L","XL"] },
+      { name: "Color", values: ["Black","White","Red","Blue","Yellow","Green"] },
+      { name: "Type", values: ["Road","Mountain","Hybrid","BMX","Electric"] }
+    ],
+    badminton: [
+      { name: "Weight", values: ["Feather","Nylon 75","Nylon 76","Nylon 77","Nylon 78"] },
+      { name: "Speed", values: ["Slow","Medium","Fast"] },
+      { name: "Pack", values: ["Single","Pack of 3","Pack of 6","Pack of 12"] }
+    ]
+  },
+
+  // ─── TOYS & KIDS ───────────────────────────────────
+  toys: {
+    default: [
+      { name: "Age Group", values: ["0-2yr","2-4yr","4-6yr","6-8yr","8-12yr","12+yr"] },
+      { name: "Color", values: ["Red","Blue","Yellow","Green","Pink","Multicolor"] },
+      { name: "Size", values: ["Small","Medium","Large"] }
+    ],
+    educational: [
+      { name: "Age Group", values: ["2-4yr","4-6yr","6-8yr","8-12yr"] },
+      { name: "Subject", values: ["Math","Science","Language","Art","Coding","General"] },
+      { name: "Pack", values: ["Single","Set","Bundle","Complete Kit"] }
+    ],
+    "outdoor toys": [
+      { name: "Age Group", values: ["3-5yr","5-8yr","8-12yr","12+yr"] },
+      { name: "Color", values: ["Red","Blue","Yellow","Green","Multicolor"] },
+      { name: "Size", values: ["Small","Medium","Large","XL"] }
+    ]
+  },
+
+  // ─── PACKAGING & CONTAINERS ───────────────────────
+  packaging: {
+    default: [
+      { name: "Capacity", values: ["200ml","300ml","400ml","500ml","600ml","800ml","1L"] },
+      { name: "Material", values: ["Stainless Steel","Plastic","Glass","Bamboo"] },
+      { name: "Color", values: ["Silver","Black","White","Red","Blue","Green","Orange"] }
+    ],
+    "lunch box": [
+      { name: "Capacity", values: ["200ml","300ml","400ml","500ml","600ml","800ml","1L","1.2L"] },
+      { name: "Compartments", values: ["1-Compartment","2-Compartment","3-Compartment","4-Compartment"] },
+      { name: "Material", values: ["Stainless Steel","Plastic","Glass"] },
+      { name: "Color", values: ["Silver","Black","White","Red","Blue","Green"] }
+    ],
+    "tiffin box": [
+      { name: "Capacity", values: ["200ml","300ml","500ml","750ml","1L"] },
+      { name: "Compartments", values: ["1-Compartment","2-Compartment","3-Compartment"] },
+      { name: "Type", values: ["Traditional","Modern","Bento Style"] },
+      { name: "Color", values: ["Silver","White","Black","Copper"] }
+    ],
+    "storage containers": [
+      { name: "Capacity", values: ["500ml","1L","2L","3L","5L","10L"] },
+      { name: "Material", values: ["Plastic","Glass","Stainless Steel","Metal"] },
+      { name: "Type", values: ["Airtight","Stackable","Freezer Safe","Microwave Safe"] }
+    ],
+    "bottles & cups": [
+      { name: "Capacity", values: ["250ml","350ml","500ml","750ml","1L"] },
+      { name: "Material", values: ["Stainless Steel","Plastic","Glass","Ceramic"] },
+      { name: "Type", values: ["Water Bottle","Coffee Mug","Travel Mug","Tumbler"] },
+      { name: "Color", values: ["Black","White","Blue","Red","Green","Silver"] }
+    ]
+  },
+
+  // ─── JEWELRY ───────────────────────────────────────
+  jewelry: {
+    default: [
+      { name: "Size", values: ["XS","S","M","L","Free Size"] },
+      { name: "Metal", values: ["Gold","Silver","Rose Gold","Platinum","Brass"] },
+      { name: "Stone", values: ["No Stone","Diamond","Ruby","Emerald","Pearl","CZ"] }
+    ],
+    rings: [
+      { name: "Ring Size", values: ["5","6","7","8","9","10","11","12","Custom"] },
+      { name: "Metal", values: ["Gold 18K","Gold 22K","Silver 925","Rose Gold","Platinum"] },
+      { name: "Stone", values: ["No Stone","Diamond","Ruby","Emerald","Sapphire","Pearl"] }
+    ],
+    necklaces: [
+      { name: "Length", values: ["14 inch","16 inch","18 inch","20 inch","22 inch","24 inch"] },
+      { name: "Metal", values: ["Gold","Silver","Rose Gold","Platinum","Brass"] },
+      { name: "Stone", values: ["No Stone","Diamond","Pearl","CZ","Gemstone"] }
+    ],
+    earrings: [
+      { name: "Style", values: ["Stud","Hoop","Drop","Chandelier","Huggie","Cuff"] },
+      { name: "Metal", values: ["Gold","Silver","Rose Gold","Platinum"] },
+      { name: "Stone", values: ["No Stone","Diamond","Pearl","CZ","Gemstone"] }
+    ]
+  },
+
+  // ─── TEXTILES & APPAREL (Alias for textiles-apparel category) ────
+  "textiles & apparel": {
+    default: [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue"] },
+      { name: "Material", values: ["Cotton","Polyester","Nylon","Silk","Blend"] }
+    ],
+    "synthetic fabric": [
+      { name: "Size", values: ["Small","Medium","Large","XL"] },
+      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue","Green"] },
+      { name: "Material", values: ["Polyester","Nylon","Acrylic","Microfiber","Blended"] },
+      { name: "Finish", values: ["Matte","Glossy","Water-Resistant","Quick-Dry"] }
+    ]
+  }
+};
+
 const productSchema = new mongoose.Schema(
   {
     // --- Basic Info ---
@@ -191,6 +607,67 @@ const productSchema = new mongoose.Schema(
         notes: { type: String },
       },
     ],
+
+    // --- Variants Support ---
+    hasVariants: { type: Boolean, default: false },
+    variantSource: {
+      type: String,
+      enum: ["auto", "manual", "hybrid"],
+      default: "auto",
+    },
+    variants: [
+      {
+        _id: mongoose.Schema.Types.ObjectId,
+        sku: { type: String, unique: true, sparse: true },
+        name: { type: String },
+        attributeValues: {
+          type: Map,
+          of: String,
+        },
+        images: [{ type: String }],
+        thumbnail: { type: String },
+        price: { type: Number, required: true },
+        originalPrice: { type: Number },
+        stock: { type: Number, default: 0 },
+        moq: { type: Number, default: 1 },
+        specifications: [
+          {
+            label: { type: String },
+            value: { type: String },
+          },
+        ],
+        available: { type: Boolean, default: true },
+        badge: { type: String },
+        status: {
+          type: String,
+          enum: ["active", "inactive", "out_of_stock"],
+          default: "active",
+        },
+        source: {
+          type: String,
+          enum: ["auto", "manual"],
+          default: "auto",
+        },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
+    variantTypes: [
+      {
+        name: { type: String },
+        type: {
+          type: String,
+          enum: ["swatch", "button", "dropdown"],
+        },
+        values: [
+          {
+            label: { type: String },
+            value: { type: String },
+            hex: { type: String },
+          },
+        ],
+      },
+    ],
   },
   {
     timestamps: true,
@@ -215,6 +692,11 @@ productSchema.index({ category: 1, price: 1 });
 productSchema.index({ category: 1, city: 1 });
 productSchema.index({ seller: 1, isActive: 1 });
 
+// Variant-related indexes
+productSchema.index({ "variants.sku": 1 });
+productSchema.index({ "variants.status": 1 });
+productSchema.index({ variantSource: 1 });
+
 // Single field indexes
 productSchema.index({ averageRating: -1 });
 productSchema.index({ views: -1 });
@@ -224,12 +706,74 @@ productSchema.index({ city: 1 });
 productSchema.index({ isFeatured: -1, featuredUntil: 1 });
 productSchema.index({ featuredUntil: 1 });
 
+// ╔═════════════════════════════════════════════════════════════════╗
+// ║          HELPER FUNCTIONS — Variant Generation                 ║
+// ╚═════════════════════════════════════════════════════════════════╝
+
+/**
+ * Generate all possible variant combinations using Cartesian product
+ * @param {Array} variantTypes - Array of variant type objects with name and values
+ * @param {String} skuPrefix - Prefix for SKU generation
+ * @param {Number} basePrice - Base price for all variants
+ * @param {Number} baseStock - Stock to distribute among variants
+ * @returns {Array} Array of variant combinations
+ */
+function generateVariantCombinations(variantTypes, skuPrefix = "", basePrice = 0, baseStock = 0) {
+  if (!variantTypes || variantTypes.length === 0) return [];
+
+  const combinations = [];
+  let combos = [{}];
+
+  // Generate Cartesian product
+  for (const vt of variantTypes) {
+    const newCombos = [];
+    for (const existing of combos) {
+      for (const value of vt.values) {
+        newCombos.push({ ...existing, [vt.name]: value });
+      }
+    }
+    combos = newCombos;
+  }
+
+  // Calculate stock per variant
+  const totalCombos = combos.length;
+  const stockPerVariant = totalCombos > 0 ? Math.floor(baseStock / totalCombos) : 0;
+
+  // Convert to variant objects with SKU
+  combos.forEach((attrs, index) => {
+    const attrPart = Object.values(attrs)
+      .map(v => v.substring(0, 3).toUpperCase().replace(/\s/g, ""))
+      .join("-");
+
+    const sku = skuPrefix
+      ? `${skuPrefix}-${attrPart}-${String(index + 1).padStart(3, "0")}`
+      : `${attrPart}-${String(index + 1).padStart(3, "0")}`;
+
+    combinations.push({
+      sku,
+      name: Object.values(attrs).join(" - "),
+      attributeValues: new Map(Object.entries(attrs)),
+      images: [],
+      thumbnail: "",
+      price: basePrice,
+      originalPrice: basePrice,
+      stock: stockPerVariant,
+      moq: 1,
+      specifications: [],
+      available: stockPerVariant > 0,
+    });
+  });
+
+  return combinations;
+}
+
 // ========================================
 // HOOKS
 // ========================================
 
-// Auto-generate slug from name
+// Auto-generate variants and slug
 productSchema.pre("save", function () {
+  // ─── Auto-generate slug from name ───
   if (this.isModified("name")) {
     const timestamp = Date.now().toString(36);
     this.slug =
@@ -240,6 +784,105 @@ productSchema.pre("save", function () {
         .substring(0, 80) +
       "-" +
       timestamp;
+  }
+
+  // ─── Auto-generate variants from category if empty ───
+  // This is a placeholder - actual auto-generation happens in controller after populating category
+  if ((!this.variantTypes || this.variantTypes.length === 0) && this.category) {
+    try {
+      // Try to extract from populated category object if available
+      const categoryObj = this.category;
+      const subCategoryObj = this.subCategory;
+
+      console.log("🔄 [AutoVariant Hook] Checking category...");
+      console.log("   categoryObj type:", typeof categoryObj);
+      console.log("   categoryObj.slug:", categoryObj?.slug);
+      console.log("   categoryObj.name:", categoryObj?.name);
+      console.log("   subCategoryObj.slug:", subCategoryObj?.slug);
+      console.log("   subCategoryObj.name:", subCategoryObj?.name);
+
+      // Only process if category is populated (object, not ObjectId)
+      if (categoryObj && typeof categoryObj === "object" && categoryObj.slug) {
+        // Extract category name from slug - try full slug first, then first word
+        let categoryName = categoryObj.slug?.toLowerCase() || categoryObj.name?.toLowerCase() || "default";
+
+        // Also try first word of slug
+        let categoryNameFirstWord = categoryObj.slug?.split("-")[0]?.toLowerCase() || "default";
+
+        console.log("   categoryName (full slug):", categoryName);
+        console.log("   categoryNameFirstWord:", categoryNameFirstWord);
+
+        // Extract subcategory name
+        let subCategoryName = "default";
+        if (subCategoryObj && typeof subCategoryObj === "object" && subCategoryObj.slug) {
+          subCategoryName = subCategoryObj.slug.toLowerCase();
+        }
+
+        console.log("   subCategoryName:", subCategoryName);
+
+        // Get variant templates from AUTO_VARIANTS mapping
+        // Try multiple variations of category name
+        let catMap = AUTO_VARIANTS[categoryName];
+
+        if (!catMap) {
+          catMap = AUTO_VARIANTS[categoryNameFirstWord];
+        }
+
+        if (!catMap) {
+          // Try replacing hyphens with spaces
+          const categoryNameWithSpaces = categoryName.replace(/-/g, " ");
+          catMap = AUTO_VARIANTS[categoryNameWithSpaces];
+        }
+
+        console.log("   AUTO_VARIANTS keys:", Object.keys(AUTO_VARIANTS));
+        console.log("   catMap found:", !!catMap);
+
+        // Use found catMap or fallback to default variants
+        let templates;
+        if (catMap) {
+          templates = catMap[subCategoryName] || catMap["default"];
+        } else {
+          // FALLBACK: Generate default variants for ANY category
+          console.log("   ⚠️ Category not in AUTO_VARIANTS, using fallback defaults");
+          templates = [
+            { name: "Size", values: ["Small","Medium","Large","XL"] },
+            { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue"] },
+            { name: "Variant", values: ["Standard","Premium","Deluxe"] }
+          ];
+        }
+
+        if (templates && templates.length > 0) {
+            // Transform templates to variantTypes format
+            this.variantTypes = templates.map(template => ({
+              name: template.name,
+              type: "dropdown",
+              values: template.values.map(value => ({
+                label: value,
+                value: value.toLowerCase().replace(/\s+/g, "-")
+              }))
+            }));
+
+            // Generate variant combinations
+            const skuPrefix = this.name?.substring(0, 3).toUpperCase().replace(/\s/g, "") || "SKU";
+            this.variants = generateVariantCombinations(
+              templates,
+              skuPrefix,
+              this.price || 0,
+              this.stock || 0
+            );
+
+            // Set hasVariants flag
+            this.hasVariants = this.variants.length > 0;
+
+            console.log(`✅ [Auto-Variants] Generated ${this.variants.length} variants for "${this.name}"`);
+            console.log(`   Category: ${categoryName}, SubCategory: ${subCategoryName}`);
+            console.log(`   Variant Types: ${this.variantTypes.map(vt => vt.name).join(", ")}`);
+          }
+        }
+    } catch (error) {
+      console.error("[Auto-Variants] Error auto-generating variants:", error.message);
+      // Don't throw - continue without auto-generation
+    }
   }
 });
 

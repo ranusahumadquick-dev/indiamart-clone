@@ -3,6 +3,7 @@ import {
   createCategory,
   getAllCategories,
   getCategoryTree,
+  getCategoryById,
   getCategoryBySlug,
   updateCategory,
   deleteCategory,
@@ -17,7 +18,20 @@ const router = express.Router();
 // =============================================
 router.get("/tree", getCategoryTree);
 router.get("/", getAllCategories);
-router.get("/:slug", getCategoryBySlug);
+// Single route that handles both ID and slug lookups
+router.get("/:idOrSlug", async (req, res, next) => {
+  const { idOrSlug } = req.params;
+  // Check if it looks like a MongoDB ObjectId (24 hex chars)
+  const isObjectId = /^[a-f0-9]{24}$/i.test(idOrSlug);
+
+  if (isObjectId) {
+    req.params.id = idOrSlug;
+    return getCategoryById(req, res, next);
+  } else {
+    req.params.slug = idOrSlug;
+    return getCategoryBySlug(req, res, next);
+  }
+});
 
 // =============================================
 // 🔒 ADMIN ROUTES

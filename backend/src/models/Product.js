@@ -13,7 +13,7 @@ const AUTO_VARIANTS = {
       { name: "Pack Type", values: ["Loose","Packet","Box","Jar","Pouch"] },
       { name: "Grade", values: ["Regular","Premium","Organic"] }
     ],
-    "grains & pulses": [
+    "grains-pulses": [
       { name: "Weight", values: ["250g","500g","1kg","2kg","5kg","10kg","25kg"] },
       { name: "Pack Type", values: ["Loose","Sealed Packet","Vacuum Pack","Jute Bag"] },
       { name: "Grade", values: ["Regular","Premium","Organic","Export Quality"] }
@@ -43,7 +43,7 @@ const AUTO_VARIANTS = {
       { name: "Flavor", values: ["Kaju","Badam","Pista","Mixed","Chocolate"] },
       { name: "Pack", values: ["Box","Loose","Gift Pack","Tin"] }
     ],
-    "dry fruits": [
+    "dry-fruits": [
       { name: "Weight", values: ["100g","250g","500g","1kg"] },
       { name: "Grade", values: ["Regular","Premium","Export Quality"] },
       { name: "Pack", values: ["Pouch","Box","Jar","Tin"] }
@@ -129,23 +129,11 @@ const AUTO_VARIANTS = {
       { name: "Color", values: ["Black","White","Blue","Red","Green","Yellow"] },
       { name: "Material", values: ["Dri-Fit","Polyester","Spandex","Mesh"] }
     ],
-    winter: [
+    "winter-wear": [
       { name: "Size", values: ["S","M","L","XL","XXL","3XL"] },
       { name: "Color", values: ["Black","Navy","Grey","Brown","Maroon","Camel"] },
       { name: "Material", values: ["Wool","Fleece","Down","Acrylic","Blended"] },
       { name: "Thickness", values: ["Light","Medium","Heavy","Extra Heavy"] }
-    ],
-    "synthetic fabric": [
-      { name: "Size", values: ["Small","Medium","Large","XL"] },
-      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue","Green"] },
-      { name: "Material", values: ["Polyester","Nylon","Acrylic","Microfiber","Blended"] },
-      { name: "Finish", values: ["Matte","Glossy","Water-Resistant","Quick-Dry"] }
-    ],
-    bags: [
-      { name: "Size", values: ["Small","Medium","Large","Extra Large"] },
-      { name: "Color", values: ["Black","Grey","Navy","Brown","Tan","White"] },
-      { name: "Material", values: ["Polyester","Nylon","Canvas","Leather","Synthetic"] },
-      { name: "Type", values: ["Backpack","Laptop Bag","Travel Bag","School Bag"] }
     ]
   },
 
@@ -220,7 +208,7 @@ const AUTO_VARIANTS = {
       { name: "Color/Finish", values: ["Walnut","Oak","White","Black","Natural Wood"] },
       { name: "Material", values: ["Solid Wood","Plywood","MDF","Metal","Rattan"] }
     ],
-    "living room": [
+    "living-room": [
       { name: "Size", values: ["2 Seater","3 Seater","L Shape","U Shape"] },
       { name: "Color", values: ["Beige","Grey","Brown","Navy","Green","Cream"] },
       { name: "Material", values: ["Fabric","Leather","Velvet","Rexine"] }
@@ -274,12 +262,12 @@ const AUTO_VARIANTS = {
       { name: "Material", values: ["Steel","Aluminium","Plastic","Iron","Brass"] },
       { name: "Grade", values: ["Standard","Professional","Industrial"] }
     ],
-    "hand tools": [
+    "hand-tools": [
       { name: "Size", values: ["Small","Medium","Large","Heavy Duty"] },
       { name: "Material", values: ["Chrome Vanadium","Carbon Steel","HSS","Alloy Steel"] },
       { name: "Set", values: ["Single","Set of 5","Set of 10","Complete Set"] }
     ],
-    "power tools": [
+    "power-tools": [
       { name: "Voltage", values: ["12V","18V","20V","110V","220V"] },
       { name: "Grade", values: ["DIY","Professional","Industrial"] },
       { name: "Color", values: ["Black","Yellow","Blue","Red","Green"] }
@@ -337,7 +325,7 @@ const AUTO_VARIANTS = {
       { name: "Subject", values: ["Math","Science","Language","Art","Coding","General"] },
       { name: "Pack", values: ["Single","Set","Bundle","Complete Kit"] }
     ],
-    "outdoor toys": [
+    "outdoor-toys": [
       { name: "Age Group", values: ["3-5yr","5-8yr","8-12yr","12+yr"] },
       { name: "Color", values: ["Red","Blue","Yellow","Green","Multicolor"] },
       { name: "Size", values: ["Small","Medium","Large","XL"] }
@@ -397,21 +385,6 @@ const AUTO_VARIANTS = {
       { name: "Style", values: ["Stud","Hoop","Drop","Chandelier","Huggie","Cuff"] },
       { name: "Metal", values: ["Gold","Silver","Rose Gold","Platinum"] },
       { name: "Stone", values: ["No Stone","Diamond","Pearl","CZ","Gemstone"] }
-    ]
-  },
-
-  // ─── TEXTILES & APPAREL (Alias for textiles-apparel category) ────
-  "textiles & apparel": {
-    default: [
-      { name: "Size", values: ["Small","Medium","Large","XL"] },
-      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue"] },
-      { name: "Material", values: ["Cotton","Polyester","Nylon","Silk","Blend"] }
-    ],
-    "synthetic fabric": [
-      { name: "Size", values: ["Small","Medium","Large","XL"] },
-      { name: "Color", values: ["White","Black","Navy","Grey","Red","Blue","Green"] },
-      { name: "Material", values: ["Polyester","Nylon","Acrylic","Microfiber","Blended"] },
-      { name: "Finish", values: ["Matte","Glossy","Water-Resistant","Quick-Dry"] }
     ]
   }
 };

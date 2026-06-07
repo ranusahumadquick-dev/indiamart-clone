@@ -176,8 +176,7 @@ const AUTO_VARIANTS = {
     laptop: [
       { name: "RAM", values: ["4GB","8GB","16GB","32GB","64GB"] },
       { name: "Storage", values: ["256GB SSD","512GB SSD","1TB HDD","1TB SSD","2TB"] },
-      { name: "Screen", values: ["13 inch","14 inch","15.6 inch","17 inch"] },
-      { name: "OS", values: ["Windows 11","macOS","Linux","Chrome OS"] }
+      { name: "Color", values: ["Silver","Space Grey","Gold","Black"] }
     ],
     audio: [
       { name: "Type", values: ["In-Ear","On-Ear","Over-Ear","Neckband","Speaker"] },
@@ -199,6 +198,33 @@ const AUTO_VARIANTS = {
       { name: "Compatibility", values: ["Universal","iOS","Android","Windows"] },
       { name: "Pack", values: ["Single","Pack of 2","Pack of 3","Combo"] }
     ]
+  },
+
+  // ─── ATTRIBUTE-BASED PRICING (Electronics) ───────
+  // Structure: { "attribute-name": { "value": cost } }
+  attributePricing: {
+    laptop: {
+      RAM: {
+        "4GB": 0,
+        "8GB": 15000,
+        "16GB": 35000,
+        "32GB": 65000,
+        "64GB": 120000
+      },
+      Storage: {
+        "256GB SSD": 0,
+        "512GB SSD": 5000,
+        "1TB HDD": 8000,
+        "1TB SSD": 12000,
+        "2TB": 20000
+      },
+      Color: {
+        "Silver": 0,
+        "Space Grey": 1000,
+        "Gold": 2000,
+        "Black": 500
+      }
+    }
   },
 
   // ─── FURNITURE & HOME ──────────────────────────────
@@ -740,6 +766,89 @@ function generateVariantCombinations(variantTypes, skuPrefix = "", basePrice = 0
   return combinations;
 }
 
+/**
+ * Calculate price for a variant using additive attribute pricing
+ * @param {Number} basePrice - Base price
+ * @param {Object} attributeValues - Variant's attribute values {RAM: "16GB", Storage: "512GB SSD", Color: "Gold"}
+ * @param {Object} attributePricingMap - Pricing map {RAM: {4GB: 0, 8GB: 15000}, Storage: {...}, ...}
+ * @returns {Number} Calculated price
+ */
+function calculateAttributeBasedPrice(basePrice, attributeValues, attributePricingMap) {
+  let totalPrice = basePrice;
+
+  for (const [attrName, attrValue] of Object.entries(attributeValues)) {
+    const pricingForAttr = attributePricingMap[attrName];
+    if (pricingForAttr && pricingForAttr[attrValue]) {
+      totalPrice += pricingForAttr[attrValue];
+    }
+  }
+
+  return Math.max(basePrice, totalPrice); // Price should never go below base price
+}
+
+/**
+ * Generate variants with attribute-based pricing
+ * @param {Array} variantTypes - Variant type definitions
+ * @param {String} skuPrefix - SKU prefix
+ * @param {Number} basePrice - Base price
+ * @param {Number} baseStock - Base stock
+ * @param {Object} attributePricingMap - Attribute pricing configuration
+ * @returns {Array} Variants with calculated prices
+ */
+function generateVariantCombinationsWithPricing(variantTypes, skuPrefix, basePrice, baseStock, attributePricingMap = {}) {
+  if (!variantTypes || variantTypes.length === 0) return [];
+
+  const combinations = [];
+  let combos = [{}];
+
+  // Generate Cartesian product
+  for (const vt of variantTypes) {
+    const newCombos = [];
+    for (const existing of combos) {
+      for (const value of vt.values) {
+        newCombos.push({ ...existing, [vt.name]: value });
+      }
+    }
+    combos = newCombos;
+  }
+
+  // Calculate stock per variant
+  const totalCombos = combos.length;
+  const stockPerVariant = totalCombos > 0 ? Math.floor(baseStock / totalCombos) : 0;
+
+  // Convert to variant objects with SKU and calculated price
+  combos.forEach((attrs, index) => {
+    const attrPart = Object.values(attrs)
+      .map(v => v.substring(0, 3).toUpperCase().replace(/\s/g, ""))
+      .join("-");
+
+    const sku = skuPrefix
+      ? `${skuPrefix}-${attrPart}-${String(index + 1).padStart(3, "0")}`
+      : `${attrPart}-${String(index + 1).padStart(3, "0")}`;
+
+    // Calculate price with attribute-based pricing
+    const calculatedPrice = attributePricingMap && Object.keys(attributePricingMap).length > 0
+      ? calculateAttributeBasedPrice(basePrice, attrs, attributePricingMap)
+      : basePrice;
+
+    combinations.push({
+      sku,
+      name: Object.values(attrs).join(" - "),
+      attributeValues: new Map(Object.entries(attrs)),
+      images: [],
+      thumbnail: "",
+      price: calculatedPrice,
+      originalPrice: basePrice,
+      stock: stockPerVariant,
+      moq: 1,
+      specifications: [],
+      available: stockPerVariant > 0,
+    });
+  });
+
+  return combinations;
+}
+
 // ========================================
 // HOOKS
 // ========================================
@@ -875,4 +984,6 @@ productSchema.set("toObject", { virtuals: true });
 productSchema.set("toJSON", { virtuals: true });
 
 const Product = mongoose.model("Product", productSchema);
+
 export default Product;
+export { generateVariantCombinations, generateVariantCombinationsWithPricing, calculateAttributeBasedPrice, AUTO_VARIANTS };

@@ -1350,6 +1350,103 @@ router.get("/:productId/reviews", async (req, res) => {
   }
 });
 
+// =============================================
+// 💻 ATTRIBUTE-BASED PRICING (Electronics)
+// =============================================
+router.post("/:productId/generate-variants-with-pricing", authMiddleware, roleMiddleware("seller"), async (req, res) => {
+  try {
+    const mongoose = await import("mongoose");
+    const Product = (await import("../models/Product.js")).default;
+    const { generateVariantCombinationsWithPricing, AUTO_VARIANTS } = await import("../models/Product.js");
+    const ApiResponse = (await import("../utils/ApiResponse.js")).default;
+
+    const { variantTypes, attributePricingMap, baseStock = 0 } = req.body;
+    const productId = req.params.productId;
+
+    // Validation
+    if (!variantTypes || !Array.isArray(variantTypes) || variantTypes.length === 0) {
+      return res.status(400).json(
+        new ApiResponse(400, null, "variantTypes array is required")
+      );
+    }
+
+    // Get product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json(
+        new ApiResponse(404, null, "Product not found")
+      );
+    }
+
+    // Check seller owns this product
+    if (product.seller.toString() !== req.user._id.toString()) {
+      return res.status(403).json(
+        new ApiResponse(403, null, "Unauthorized to modify this product")
+      );
+    }
+
+    // Extract variant values from variantTypes
+    const templates = variantTypes.map(vt => ({
+      name: vt.name,
+      values: vt.values || []
+    }));
+
+    // Generate variants with attribute-based pricing
+    const skuPrefix = product.name?.substring(0, 3).toUpperCase().replace(/\s/g, "") || "SKU";
+    const variants = generateVariantCombinationsWithPricing(
+      templates,
+      skuPrefix,
+      product.price || 0,
+      baseStock || product.stock || 0,
+      attributePricingMap || {}
+    );
+
+    // Set variant types
+    product.variantTypes = variantTypes.map(vt => ({
+      name: vt.name,
+      type: "dropdown",
+      values: (vt.values || []).map(value => ({
+        label: value,
+        value: value.toLowerCase().replace(/\s+/g, "-")
+      }))
+    }));
+
+    // Assign product images to all variants
+    const productImages = product.images?.map(img => typeof img === 'string' ? img : img.url) || [];
+    variants.forEach(variant => {
+      variant.images = productImages;
+      variant.thumbnail = productImages[0] || "";
+    });
+
+    // Update product
+    product.variants = variants;
+    product.hasVariants = variants.length > 0;
+    product.variantSource = "auto";
+
+    await product.save();
+
+    res.status(200).json(
+      new ApiResponse(200, {
+        productId: product._id,
+        productName: product.name,
+        variantCount: variants.length,
+        variantTypes: product.variantTypes,
+        sampleVariants: variants.slice(0, 3).map(v => ({
+          sku: v.sku,
+          name: v.name,
+          price: v.price,
+          attributeValues: Object.fromEntries(v.attributeValues || [])
+        }))
+      }, `✅ Generated ${variants.length} variants with attribute-based pricing!`)
+    );
+  } catch (error) {
+    console.error("Error generating variants with pricing:", error);
+    res.status(500).json(
+      new ApiResponse(500, null, "Error generating variants: " + error.message)
+    );
+  }
+});
+
 // Create a new review
 router.post("/:productId/reviews", authMiddleware, async (req, res) => {
   try {

@@ -1351,7 +1351,42 @@ router.get("/:productId/reviews", async (req, res) => {
 });
 
 // =============================================
-// 💻 ATTRIBUTE-BASED PRICING (Electronics)
+// 💰 GET ATTRIBUTE PRICING TEMPLATE
+// =============================================
+router.get("/pricing/template/:categorySlug/:subcategorySlug", async (req, res) => {
+  try {
+    const { categorySlug, subcategorySlug } = req.params;
+    const { attributePricing } = await import("../models/Product.js");
+    const ApiResponse = (await import("../utils/ApiResponse.js")).default;
+
+    // Get pricing template for category/subcategory
+    const categoryPricing = attributePricing[categorySlug];
+    if (!categoryPricing) {
+      return res.status(404).json(
+        new ApiResponse(404, null, `No pricing template found for category: ${categorySlug}`)
+      );
+    }
+
+    const subCategoryPricing = categoryPricing[subcategorySlug];
+    if (!subCategoryPricing) {
+      return res.status(404).json(
+        new ApiResponse(404, null, `No pricing template found for subcategory: ${subcategorySlug}`)
+      );
+    }
+
+    res.status(200).json(
+      new ApiResponse(200, subCategoryPricing, `Pricing template for ${categorySlug}/${subcategorySlug}`)
+    );
+  } catch (error) {
+    console.error("Error fetching pricing template:", error);
+    res.status(500).json(
+      new ApiResponse(500, null, "Error fetching pricing template: " + error.message)
+    );
+  }
+});
+
+// =============================================
+// 💻 ATTRIBUTE-BASED PRICING (All Categories)
 // =============================================
 router.post("/:productId/generate-variants-with-pricing", authMiddleware, roleMiddleware("seller"), async (req, res) => {
   try {

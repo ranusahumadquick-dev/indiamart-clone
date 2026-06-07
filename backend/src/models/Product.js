@@ -200,29 +200,122 @@ const AUTO_VARIANTS = {
     ]
   },
 
-  // ─── ATTRIBUTE-BASED PRICING (Electronics) ───────
-  // Structure: { "attribute-name": { "value": cost } }
+  // ─── ATTRIBUTE-BASED PRICING (Multiple Categories) ───────
+  // Structure: { category: { subCategory: { "attribute-name": { "value": cost } } } }
   attributePricing: {
-    laptop: {
-      RAM: {
-        "4GB": 0,
-        "8GB": 15000,
-        "16GB": 35000,
-        "32GB": 65000,
-        "64GB": 120000
+    // ELECTRONICS
+    electronics: {
+      laptop: {
+        RAM: { "4GB": 0, "8GB": 15000, "16GB": 35000, "32GB": 65000, "64GB": 120000 },
+        Storage: { "256GB SSD": 0, "512GB SSD": 5000, "1TB HDD": 8000, "1TB SSD": 12000, "2TB": 20000 },
+        Color: { "Silver": 0, "Space Grey": 1000, "Gold": 2000, "Black": 500 }
       },
-      Storage: {
-        "256GB SSD": 0,
-        "512GB SSD": 5000,
-        "1TB HDD": 8000,
-        "1TB SSD": 12000,
-        "2TB": 20000
+      mobile: {
+        RAM: { "4GB": 0, "6GB": 5000, "8GB": 10000, "12GB": 18000, "16GB": 28000 },
+        Storage: { "64GB": 0, "128GB": 5000, "256GB": 12000, "512GB": 25000, "1TB": 45000 },
+        Color: { "Black": 0, "White": 0, "Blue": 1000, "Gold": 1500, "Silver": 800 }
       },
-      Color: {
-        "Silver": 0,
-        "Space Grey": 1000,
-        "Gold": 2000,
-        "Black": 500
+      audio: {
+        Type: { "In-Ear": 0, "On-Ear": 2000, "Over-Ear": 5000, "Neckband": 3000, "Speaker": 8000 },
+        Connectivity: { "Wired": 0, "Bluetooth": 3000, "2.4GHz": 2500, "Hybrid": 4000 },
+        Color: { "Black": 0, "White": 500, "Blue": 500, "Red": 500, "Grey": 500 }
+      },
+      tv: {
+        "Screen Size": { "32 inch": 0, "43 inch": 10000, "50 inch": 20000, "55 inch": 30000, "65 inch": 50000, "75 inch": 80000 },
+        Resolution: { "HD": 0, "Full HD": 5000, "4K": 15000, "8K": 50000 },
+        Type: { "LED": 0, "OLED": 25000, "QLED": 20000, "AMOLED": 30000 }
+      }
+    },
+
+    // CLOTHING & APPAREL
+    clothing: {
+      men: {
+        Size: { "XS": 0, "S": 0, "M": 0, "L": 0, "XL": 200, "XXL": 400, "3XL": 600 },
+        Material: { "Cotton": 0, "Polyester": 100, "Linen": 300, "Blended": 150 },
+        Fit: { "Regular": 0, "Slim": 200, "Relaxed": 100, "Oversized": 150 },
+        Color: { "White": 0, "Black": 0, "Navy": 0, "Grey": 0, "Brown": 100, "Olive": 150 }
+      },
+      women: {
+        Size: { "XS": 0, "S": 0, "M": 0, "L": 0, "XL": 200, "XXL": 400 },
+        Style: { "Casual": 0, "Formal": 500, "Party": 1000, "Ethnic": 800 },
+        Material: { "Cotton": 0, "Chiffon": 400, "Silk": 800, "Polyester": 100 },
+        Color: { "White": 0, "Black": 0, "Red": 200, "Pink": 200, "Blue": 0, "Yellow": 150 }
+      }
+    },
+
+    // FOOTWEAR
+    footwear: {
+      men: {
+        "Size (UK)": { "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 200, "12": 400 },
+        Color: { "Black": 0, "Brown": 0, "White": 100, "Tan": 150, "Navy": 100 },
+        Type: { "Formal": 0, "Casual": 100, "Sports": 200, "Sandal": 300, "Slipper": 250 }
+      },
+      women: {
+        "Size (UK)": { "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 200 },
+        Heel: { "Flat": 0, "Low Heel": 300, "Mid Heel": 500, "High Heel": 800, "Wedge": 600 },
+        Color: { "Black": 0, "White": 0, "Nude": 100, "Red": 300, "Pink": 250, "Gold": 400 }
+      }
+    },
+
+    // FURNITURE & HOME
+    furniture: {
+      "living-room": {
+        Size: { "2 Seater": 0, "3 Seater": 15000, "L Shape": 25000, "U Shape": 40000 },
+        Material: { "Fabric": 0, "Leather": 20000, "Velvet": 15000, "Rexine": 5000 },
+        Color: { "Beige": 0, "Grey": 0, "Brown": 1000, "Navy": 1500, "Green": 2000, "Cream": 500 }
+      },
+      bedroom: {
+        Size: { "Single": 0, "Double": 10000, "Queen": 15000, "King": 25000, "Super King": 40000 },
+        Material: { "Solid Wood": 0, "Engineered Wood": 5000, "Metal": 8000, "Upholstered": 12000 },
+        "Color/Finish": { "Walnut": 0, "White": 2000, "Oak": 1500, "Grey": 1000, "Wenge": 3000 },
+        Storage: { "Without Storage": 0, "With Storage": 5000, "Hydraulic": 8000, "Drawer": 6000 }
+      },
+      office: {
+        Size: { "Small": 0, "Medium": 5000, "Large": 12000, "L Shape": 20000, "U Shape": 35000 },
+        Material: { "MDF": 0, "Solid Wood": 8000, "Metal": 6000, "Glass Top": 10000 },
+        Color: { "Black": 0, "White": 1000, "Walnut": 2000, "Grey": 1500, "Oak": 2500 }
+      }
+    },
+
+    // JEWELRY
+    jewelry: {
+      rings: {
+        "Ring Size": { "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 0, "12": 500, "Custom": 1000 },
+        Metal: { "Gold 18K": 0, "Gold 22K": 5000, "Silver 925": 2000, "Rose Gold": 3000, "Platinum": 15000 },
+        Stone: { "No Stone": 0, "Diamond": 10000, "Ruby": 8000, "Emerald": 7000, "Sapphire": 6000, "Pearl": 3000 }
+      },
+      necklaces: {
+        Length: { "14 inch": 0, "16 inch": 500, "18 inch": 1000, "20 inch": 1500, "22 inch": 2000, "24 inch": 2500 },
+        Metal: { "Gold": 0, "Silver": 2000, "Rose Gold": 3000, "Platinum": 12000, "Brass": 500 },
+        Stone: { "No Stone": 0, "Diamond": 15000, "Pearl": 5000, "CZ": 2000, "Gemstone": 8000 }
+      }
+    },
+
+    // COSMETICS & BEAUTY
+    cosmetics: {
+      skincare: {
+        Size: { "15ml": 0, "30ml": 500, "50ml": 1000, "75ml": 1500, "100ml": 2000, "200ml": 3500 },
+        "Skin Type": { "Oily": 0, "Dry": 0, "Normal": 0, "Combination": 0, "Sensitive": 500 },
+        SPF: { "No SPF": 0, "SPF 15": 200, "SPF 30": 400, "SPF 50": 600, "SPF 50+": 800 }
+      },
+      makeup: {
+        Shade: { "Fair": 0, "Light": 0, "Medium": 0, "Tan": 0, "Deep": 0, "Rich": 200 },
+        Finish: { "Matte": 0, "Dewy": 100, "Satin": 150, "Glossy": 120, "Natural": 80 },
+        Size: { "Mini": 0, "Regular": 300, "Full Size": 600, "Value Pack": 1000 }
+      }
+    },
+
+    // SPORTS & FITNESS
+    sports: {
+      gym: {
+        Weight: { "1kg": 0, "2kg": 200, "5kg": 500, "10kg": 1000, "15kg": 1500, "20kg": 2000, "25kg": 2500 },
+        Material: { "Cast Iron": 0, "Rubber Coated": 500, "Chrome": 800, "Neoprene": 600 },
+        Set: { "Single": 0, "Pair": 300, "Set of 3": 800, "Full Set": 2000 }
+      },
+      yoga: {
+        Size: { "Standard": 0, "Large": 500, "Extra Large": 1000 },
+        Thickness: { "3mm": 0, "4mm": 300, "6mm": 600, "8mm": 1000, "10mm": 1500 },
+        Color: { "Blue": 0, "Purple": 100, "Green": 100, "Black": 0, "Pink": 150, "Orange": 120 }
       }
     }
   },
@@ -986,4 +1079,4 @@ productSchema.set("toJSON", { virtuals: true });
 const Product = mongoose.model("Product", productSchema);
 
 export default Product;
-export { generateVariantCombinations, generateVariantCombinationsWithPricing, calculateAttributeBasedPrice, AUTO_VARIANTS };
+export { generateVariantCombinations, generateVariantCombinationsWithPricing, calculateAttributeBasedPrice, AUTO_VARIANTS, attributePricing: AUTO_VARIANTS.attributePricing };

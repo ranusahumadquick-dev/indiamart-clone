@@ -18,65 +18,123 @@ const createInquiry = asyncHandler(async (req, res) => {
   const { message, quantityRequired, preferredDeliveryLocation, subject } =
     req.body;
 
+  console.log("📨 [Inquiry] Creating inquiry...");
+  console.log("   Product ID:", productId);
+  console.log("   req.user:", req.user ? `${req.user._id} (${req.user.email})` : "undefined");
+  console.log("   Message:", message?.substring(0, 50) + "...");
+
   if (!message) {
     throw new ApiError(400, "Message is required");
   }
 
-  // Find the product to get seller info
+  if (!req.user || !req.user._id) {
+    console.error("❌ [Inquiry] User not found in request:", req.user);
+    throw new ApiError(401, "Unauthorized - User not found");
+  }
+
+  // Find the product to get seller info (explicitly include _id)
   const product = await Product.findById(productId).populate(
     "seller",
-    "name email"
+    "_id name email"
   );
 
   if (!product) {
     throw new ApiError(404, "Product not found");
   }
 
+  console.log("   Product found:", productId);
+  console.log("   Product seller:", product.seller ? `${product.seller._id} (${product.seller.name})` : "undefined");
+
+  // Defensive validation before creating inquiry
+  console.log("   Validating IDs before creation...");
+
+  // Check buyer ID
+  if (!req.user._id || typeof req.user._id.toString !== 'function') {
+    console.error("❌ [Inquiry] Invalid buyer ID:", req.user._id, "Type:", typeof req.user._id);
+    throw new ApiError(400, "Invalid buyer ID");
+  }
+
+  // Check product ID
+  if (!productId) {
+    console.error("❌ [Inquiry] Product ID is missing");
+    throw new ApiError(400, "Invalid product ID");
+  }
+
+  // Check seller ID — THIS IS CRITICAL
+  if (!product.seller || !product.seller._id) {
+    console.error("❌ [Inquiry] Product seller missing or has no _id:", {
+      hasSeller: !!product.seller,
+      sellerId: product.seller?._id,
+      sellerObj: product.seller,
+    });
+    throw new ApiError(400, "Product seller information is invalid");
+  }
+
+  const sellerId = product.seller._id;
+  console.log("   IDs validated successfully:");
+  console.log("     - Buyer:", req.user._id?.toString());
+  console.log("     - Seller:", sellerId?.toString());
+  console.log("     - Product:", productId);
+
+  // Create inquiry with validated data
   const inquiry = await Inquiry.create({
     buyer: req.user._id,
     buyerName: req.user.name,
     buyerEmail: req.user.email,
     buyerPhone: req.user.phone,
     product: productId,
-    seller: product.seller?._id,
+    seller: sellerId,
     subject,
     message,
     quantityRequired,
     preferredDeliveryLocation,
   });
+  console.log("✅ [Inquiry] Created successfully:", inquiry._id);
 
   // Increment inquiry count on product
-  await Product.findByIdAndUpdate(productId, { $inc: { inquiryCount: 1 } });
+  try {
+    await Product.findByIdAndUpdate(productId, { $inc: { inquiryCount: 1 } });
+    console.log("✅ [Inquiry] Product inquiry count updated");
+  } catch (err) {
+    console.warn("⚠️ [Inquiry] Failed to update inquiry count:", err?.message);
+  }
 
   // Send email notification to seller (best-effort, respects preferences)
   try {
     const sellerEmail = product.seller?.email;
+    console.log("📧 [Inquiry] Seller email:", sellerEmail);
+
     if (sellerEmail) {
-      const seller = await User.findById(product.seller._id).select("notificationPreferences");
-      const prefs = seller?.notificationPreferences;
-      const shouldSendEmail = prefs?.inquiryAlerts !== false && prefs?.channels?.email !== false;
+      if (!product.seller._id) {
+        console.warn("⚠️ [Inquiry] Seller ID is undefined");
+      } else {
+        const seller = await User.findById(product.seller._id).select("notificationPreferences");
+        const prefs = seller?.notificationPreferences;
+        const shouldSendEmail = prefs?.inquiryAlerts !== false && prefs?.channels?.email !== false;
 
-      if (shouldSendEmail) {
-        const productLink = `${process.env.CLIENT_URL || "http://localhost:3000"}/products/${product.slug || product._id}`;
-        const html = `
-          <p>Hi ${product.seller?.name || "Seller"},</p>
-          <p>You have received a new inquiry for your product <strong>${product.name}</strong>.</p>
-          <p><strong>From:</strong> ${req.user.name} (${req.user.email} / ${req.user.phone})</p>
-          <p><strong>Message:</strong><br/>${message}</p>
-          <p><a href="${productLink}">View product</a> | <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/seller/inbox">View inbox</a></p>
-        `;
+        if (shouldSendEmail) {
+          const productLink = `${process.env.CLIENT_URL || "http://localhost:3000"}/products/${product.slug || product._id}`;
+          const html = `
+            <p>Hi ${product.seller?.name || "Seller"},</p>
+            <p>You have received a new inquiry for your product <strong>${product.name}</strong>.</p>
+            <p><strong>From:</strong> ${req.user.name} (${req.user.email} / ${req.user.phone})</p>
+            <p><strong>Message:</strong><br/>${message}</p>
+            <p><a href="${productLink}">View product</a> | <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/seller/inbox">View inbox</a></p>
+          `;
 
-        await sendEmail({
-          to: sellerEmail,
-          subject: `New enquiry for ${product.name}`,
-          html,
-        });
+          await sendEmail({
+            to: sellerEmail,
+            subject: `New enquiry for ${product.name}`,
+            html,
+          });
+        }
       }
     }
   } catch (err) {
-    console.warn("Failed to send inquiry notification email:", err?.message || err);
+    console.warn("⚠️ [Inquiry] Failed to send notification email:", err?.message || err);
   }
 
+  console.log("✅ [Inquiry] Sending success response");
   return res
     .status(201)
     .json(new ApiResponse(201, inquiry, "Inquiry sent successfully"));
@@ -319,7 +377,7 @@ const createBulkInquiry = asyncHandler(async (req, res) => {
   const products = await Product.find({
     _id: { $in: productIds },
     isActive: true,
-  }).populate("seller", "name email");
+  }).populate("seller", "_id name email");
 
   if (products.length === 0) throw new ApiError(404, "No valid products found");
 

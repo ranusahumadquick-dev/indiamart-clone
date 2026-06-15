@@ -7,7 +7,7 @@ import {
   updateCustomizationStatus,
   deleteCustomization,
 } from "../controllers/customizationController.js";
-import { customizationUpload } from "../middleware/multer.js";
+import { customizationUpload, handleMulterError } from "../middleware/multer.js";
 
 const router = express.Router();
 
@@ -16,10 +16,17 @@ const router = express.Router();
 router.post(
   "/",
   auth,
-  customizationUpload.fields([
-    { name: "logo", maxCount: 1 },
-    { name: "attachment", maxCount: 10 }
-  ]),
+  (req, res, next) => {
+    customizationUpload.fields([
+      { name: "logo", maxCount: 1 },
+      { name: "attachment", maxCount: 10 }
+    ])(req, res, (err) => {
+      if (err) {
+        return handleMulterError(err, req, res, next);
+      }
+      next();
+    });
+  },
   createCustomizationRequest
 );
 

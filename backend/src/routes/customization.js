@@ -11,11 +11,15 @@ import { customizationUpload } from "../middleware/multer.js";
 
 const router = express.Router();
 
-// Create customization request with file upload
+// Create customization request with file uploads
+// Handles: 1 logo file + multiple attachment files + form fields
 router.post(
   "/",
   auth,
-  customizationUpload.single("logo"),
+  customizationUpload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "attachment", maxCount: 10 }
+  ]),
   createCustomizationRequest
 );
 

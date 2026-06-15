@@ -45,13 +45,14 @@ export const createCustomizationRequest = async (req, res) => {
       packagingRequirement: packagingRequirement || "",
     };
 
-    // Handle file uploads
-    if (req.file) {
-      customizationData.logoUrl = `/uploads/customizations/${req.file.filename}`;
+    // Handle file uploads with .fields() middleware
+    // req.files is an object with keys: { logo: [...], attachment: [...] }
+    if (req.files && req.files.logo && req.files.logo.length > 0) {
+      customizationData.logoUrl = `/uploads/customizations/${req.files.logo[0].filename}`;
     }
 
-    if (req.files && req.files.length > 0) {
-      customizationData.attachmentUrls = req.files.map(
+    if (req.files && req.files.attachment && req.files.attachment.length > 0) {
+      customizationData.attachmentUrls = req.files.attachment.map(
         (file) => `/uploads/customizations/${file.filename}`
       );
     }

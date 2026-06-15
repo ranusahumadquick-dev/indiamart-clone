@@ -56,6 +56,7 @@ export const processUploadedImages = (files = [], backendUrl = "http://localhost
 
       return {
         url,
+        type: 'image',
         publicId: file.filename,
         size: file.size,
         mimetype: file.mimetype,

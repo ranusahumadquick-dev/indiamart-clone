@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rm -rf c:/Users/RANU/Desktop/indiamart/server c:/Users/RANU/Desktop/indiamart/scripts)"
+      "Bash(rm -rf c:/Users/RANU/Desktop/indiamart/server c:/Users/RANU/Desktop/indiamart/scripts)",
+      "Bash(pkill -9 -f \"node\\\\|next\")",
+      "Bash(PORT=3000 npm run dev)",
+      "Bash(curl -s -I http://localhost:3000)"
     ],
     "additionalDirectories": [
       "c:\\Users\\RANU\\Desktop\\indiamart\\server"

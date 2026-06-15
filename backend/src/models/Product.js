@@ -1078,5 +1078,8 @@ productSchema.set("toJSON", { virtuals: true });
 
 const Product = mongoose.model("Product", productSchema);
 
+// Extract attributePricing for easier access
+const attributePricing = AUTO_VARIANTS.attributePricing || {};
+
 export default Product;
-export { generateVariantCombinations, generateVariantCombinationsWithPricing, calculateAttributeBasedPrice, AUTO_VARIANTS, attributePricing: AUTO_VARIANTS.attributePricing };
+export { generateVariantCombinations, generateVariantCombinationsWithPricing, calculateAttributeBasedPrice, AUTO_VARIANTS, attributePricing };

@@ -63,10 +63,4 @@ const customizationSchema = new mongoose.Schema({
   },
 });
 
-// Update updatedAt on save
-customizationSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
 export default mongoose.model("Customization", customizationSchema);

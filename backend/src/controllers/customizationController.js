@@ -43,6 +43,7 @@ export const createCustomizationRequest = async (req, res) => {
       message,
       oemRequirement: oemRequirement || "",
       packagingRequirement: packagingRequirement || "",
+      updatedAt: new Date(),
     };
 
     // Handle file uploads with .fields() middleware

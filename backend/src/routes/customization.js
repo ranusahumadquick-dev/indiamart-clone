@@ -7,13 +7,15 @@ import {
   updateCustomizationStatus,
   deleteCustomization,
 } from "../controllers/customizationController.js";
-import uploadMiddleware from "../middleware/multer.js";
+import { customizationUpload } from "../middleware/multer.js";
+
+const router = express.Router();
 
 // Create customization request with file upload
 router.post(
   "/",
   auth,
-  uploadMiddleware.customizationUpload.single("logo"),
+  customizationUpload.single("logo"),
   createCustomizationRequest
 );
 

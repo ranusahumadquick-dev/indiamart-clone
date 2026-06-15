@@ -7,28 +7,57 @@ import {
   updateCustomizationStatus,
   deleteCustomization,
 } from "../controllers/customizationController.js";
-import { customizationUpload, handleMulterError } from "../middleware/multer.js";
+import { customizationUpload } from "../middleware/multer.js";
 
 const router = express.Router();
 
 // Create customization request with file uploads
-// Handles: 1 logo file + multiple attachment files + form fields
 router.post(
   "/",
   auth,
-  (req, res, next) => {
-    customizationUpload.fields([
-      { name: "logo", maxCount: 1 },
-      { name: "attachment", maxCount: 10 }
-    ])(req, res, (err) => {
-      if (err) {
-        return handleMulterError(err, req, res, next);
-      }
-      next();
-    });
-  },
+  customizationUpload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "attachment", maxCount: 10 }
+  ]),
   createCustomizationRequest
 );
+
+// Error handler for multer
+router.use((err, req, res, next) => {
+  if (err && err.message && err.message.includes("Invalid file type")) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      error: "INVALID_FILE_TYPE",
+    });
+  }
+
+  if (err && err.code === "FILE_TOO_LARGE") {
+    return res.status(400).json({
+      success: false,
+      message: "File size exceeds 5MB limit",
+      error: "FILE_TOO_LARGE",
+    });
+  }
+
+  if (err && err.code === "LIMIT_FILE_COUNT") {
+    return res.status(400).json({
+      success: false,
+      message: "Too many files uploaded",
+      error: "LIMIT_FILE_COUNT",
+    });
+  }
+
+  if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || "File upload failed",
+      error: err.code || "UPLOAD_ERROR",
+    });
+  }
+
+  next();
+});
 
 // Get buyer's customization requests
 router.get("/", auth, getBuyerCustomizations);

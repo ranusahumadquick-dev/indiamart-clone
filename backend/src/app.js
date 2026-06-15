@@ -30,7 +30,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
-import customizationRoutes from "./routes/customization.js";
+// import customizationRoutes from "./routes/customization.js";
 
 // =============================================
 // Middleware Imports
@@ -204,7 +204,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/images", imageRoutes);
-app.use("/api/customizations", customizationRoutes);
+// app.use("/api/customizations", customizationRoutes);
 
 // =============================================
 // 404 HANDLER — Route not found

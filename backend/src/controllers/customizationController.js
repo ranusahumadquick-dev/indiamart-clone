@@ -7,11 +7,22 @@ import Product from "../models/Product.js";
 
 export const createCustomizationRequest = async (req, res) => {
   try {
-    const { productId, quantity, message, oemRequirement, packagingRequirement } = req.body;
+    const { productId, sellerId, quantity, message, oemRequirement, packagingRequirement } = req.body;
     const buyerId = req.user._id;
+
+    console.log('📥 [Customization] Received request:', {
+      productId,
+      sellerId: sellerId || 'NOT PROVIDED',
+      buyerId,
+      quantity,
+      message: message?.substring(0, 50) + '...',
+      hasLogo: !!req.files?.logo,
+      attachmentCount: req.files?.attachment?.length || 0,
+    });
 
     // Validate required fields
     if (!productId || !quantity || !message) {
+      console.warn('❌ [Customization] Validation failed: missing required fields');
       return res.status(400).json({
         success: false,
         message: "Missing required fields: productId, quantity, message",
@@ -21,11 +32,16 @@ export const createCustomizationRequest = async (req, res) => {
     // Validate product exists
     const product = await Product.findById(productId);
     if (!product) {
+      console.warn('❌ [Customization] Product not found:', productId);
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
+
+    // Get sellerId from request or fallback to product seller
+    const finalSellerId = sellerId || product.seller;
+    console.log('✓ [Customization] Seller ID resolved:', finalSellerId);
 
     // Validate quantity
     if (parseInt(quantity) < 1) {
@@ -38,6 +54,7 @@ export const createCustomizationRequest = async (req, res) => {
     // Prepare customization data
     const customizationData = {
       productId,
+      sellerId: finalSellerId,
       buyerId,
       quantity: parseInt(quantity),
       message,
@@ -50,17 +67,26 @@ export const createCustomizationRequest = async (req, res) => {
     // req.files is an object with keys: { logo: [...], attachment: [...] }
     if (req.files && req.files.logo && req.files.logo.length > 0) {
       customizationData.logoUrl = `/uploads/customizations/${req.files.logo[0].filename}`;
+      console.log('✓ [Customization] Logo uploaded:', customizationData.logoUrl);
     }
 
     if (req.files && req.files.attachment && req.files.attachment.length > 0) {
       customizationData.attachmentUrls = req.files.attachment.map(
         (file) => `/uploads/customizations/${file.filename}`
       );
+      console.log('✓ [Customization] Attachments uploaded:', customizationData.attachmentUrls.length);
     }
 
     // Create customization request
     const customization = new Customization(customizationData);
     await customization.save();
+
+    console.log('✅ [Customization] Saved to database:', {
+      customizationId: customization._id,
+      sellerId: customization.sellerId,
+      buyerId: customization.buyerId,
+      status: customization.status,
+    });
 
     // Populate product and buyer info for response
     await customization.populate("productId", "name");
@@ -72,17 +98,72 @@ export const createCustomizationRequest = async (req, res) => {
       data: {
         _id: customization._id,
         customizationId: customization._id,
+        sellerId: customization.sellerId,
         logoUrl: customization.logoUrl,
         status: customization.status,
         createdAt: customization.createdAt,
       },
     });
   } catch (error) {
-    console.error("Error creating customization request:", error);
+    console.error("❌ Error creating customization request:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create customization request",
       error: error.code || "INTERNAL_ERROR",
+    });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET CUSTOMIZATION REQUESTS (FOR SELLER)
+// ────────────────────────────────────────────────────────────────────────────
+
+export const getSellerCustomizations = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+    const { status, page = 1, limit = 20 } = req.query;
+
+    console.log('📥 [Seller Customizations] Fetching requests for seller:', sellerId);
+
+    const query = { sellerId };
+    if (status) query.status = status;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [customizations, total] = await Promise.all([
+      Customization.find(query)
+        .populate('productId', 'name image')
+        .populate('buyerId', 'name email companyName')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Customization.countDocuments(query),
+    ]);
+
+    console.log('✅ [Seller Customizations] Found:', {
+      count: customizations.length,
+      total,
+      page,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        customizations,
+        pagination: {
+          current: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error fetching seller customizations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch customization requests',
+      error: error.message,
     });
   }
 };

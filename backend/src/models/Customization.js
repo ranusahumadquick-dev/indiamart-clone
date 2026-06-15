@@ -6,6 +6,12 @@ const customizationSchema = new mongoose.Schema({
     ref: "Product",
     required: [true, "Product ID is required"],
   },
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: [true, "Seller ID is required"],
+    index: true,
+  },
   buyerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

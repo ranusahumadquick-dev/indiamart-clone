@@ -23,6 +23,8 @@ import {
   getSellerQuotaStatus,
 } from "../controllers/sellerController.js";
 
+import { getSellerCustomizations } from "../controllers/customizationController.js";
+
 const router = express.Router();
 
 // ========================================
@@ -45,6 +47,14 @@ router.get(
   authMiddleware,
   roleMiddleware(["seller"]),
   getSellerAnalytics
+);
+
+// GET - Seller customization requests
+router.get(
+  "/customizations",
+  authMiddleware,
+  roleMiddleware(["seller"]),
+  getSellerCustomizations
 );
 
 // GET - Get own seller profile

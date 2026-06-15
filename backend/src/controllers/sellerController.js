@@ -694,7 +694,7 @@ export const getTrustScore = asyncHandler(async (req, res) => {
  */
 export const getSellerQuotaStatus = asyncHandler(async (req, res) => {
   const { default: Subscription } = await import("../models/Subscription.js");
-  const { default: SubscriptionPlan } = await import("../models/SubscriptionPlan.js");
+  const { SubscriptionPlan } = await import("../models/SubscriptionPlan.js");
 
   const sellerId = req.user._id;
 

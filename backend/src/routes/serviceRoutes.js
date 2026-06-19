@@ -17,16 +17,24 @@ import { serviceUpload } from '../middleware/multer.js';
 
 const router = express.Router();
 
-// Public routes
+// ============================================
+// IMPORTANT: More specific routes FIRST
+// ============================================
+
+// Protected routes with specific paths (BEFORE /:id)
+router.get(
+  '/dashboard/my-services',
+  auth,
+  roleMiddleware(['seller']),
+  getMyServices
+); // Get current user's services
+
+// Public routes with specific paths (BEFORE /:id)
 router.get('/search', searchServices); // Search services
 router.get('/category/:category', getServicesByCategory); // Get by category
-router.get('/', getAllServices); // Get all services with filters
-router.get('/:id', getServiceById); // Get single service
-
-// Provider routes (public)
 router.get('/provider/:providerId', getProviderServices); // Get provider's services
 
-// Protected routes (require authentication)
+// Creation route
 router.post(
   '/',
   auth,
@@ -34,6 +42,12 @@ router.post(
   serviceUpload.array('images', 5),
   createService
 ); // Create service
+
+// Generic routes (AFTER specific ones)
+router.get('/', getAllServices); // Get all services with filters
+
+// By ID routes (LAST)
+router.get('/:id', getServiceById); // Get single service
 
 router.put(
   '/:id',
@@ -50,15 +64,6 @@ router.delete(
   deleteService
 ); // Delete service
 
-// Get current user's services
-router.get(
-  '/dashboard/my-services',
-  auth,
-  roleMiddleware(['seller']),
-  getMyServices
-);
-
-// Record inquiry
-router.post('/:id/inquiry', auth, recordInquiry);
+router.post('/:id/inquiry', auth, recordInquiry); // Record inquiry
 
 export default router;

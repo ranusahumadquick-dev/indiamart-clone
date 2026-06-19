@@ -37,6 +37,7 @@ import serviceRoutes from "./routes/serviceRoutes.js";
 // Middleware Imports
 // =============================================
 import errorHandler from "./middleware/errorHandler.js";
+import { handleMulterError } from "./middleware/multer.js";
 
 const app = express();
 
@@ -217,6 +218,11 @@ app.use((req, res) => {
     message: `Route not found: ${req.method} ${req.originalUrl}`,
   });
 });
+
+// =============================================
+// MULTER ERROR HANDLER — Before global error handler
+// =============================================
+app.use(handleMulterError);
 
 // =============================================
 // GLOBAL ERROR HANDLER — Must be last middleware

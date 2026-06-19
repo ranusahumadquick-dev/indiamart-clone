@@ -39,6 +39,8 @@ IndiaMart Clone is a comprehensive B2B marketplace platform that enables:
 
 ### Key Highlights
 
+✅ Complete RFQ (Request For Quotation) system with quote comparison  
+✅ Price negotiation with counter-offers  
 ✅ End-to-end customization request system with file uploads  
 ✅ Real-time chat between buyers and sellers  
 ✅ Seller subscription plans with quota management  
@@ -79,11 +81,16 @@ IndiaMart Clone is a comprehensive B2B marketplace platform that enables:
 - ✅ Product Inquiries - Request information from sellers
 - ✅ Bulk Inquiry - Send multiple product inquiries at once
 - ✅ Sample Requests - Request samples before bulk purchase
+- ✅ RFQ (Request For Quotation) - Post detailed buying requirements with specs
+- ✅ RFQ Responses - Receive & compare quotes from multiple sellers
+- ✅ RFQ Comparison - Side-by-side quote comparison and analysis
+- ✅ RFQ Negotiation - Counter-offers and price negotiation with sellers
+- ✅ RFQ History - Track all RFQs and their responses
 - ✅ Price Alerts - Get notified when prices drop
 - ✅ Product Comparison - Compare multiple products side-by-side
 - ✅ Reviews & Ratings - Leave and read product reviews
 - ✅ Customization Requests - Request custom products with file uploads
-- ✅ Buyer Dashboard - Track inquiries, samples, orders, settings
+- ✅ Buyer Dashboard - Track inquiries, samples, RFQs, orders, settings
 - ✅ 6-Tab Settings - Profile, address, notifications, security, payment, wishlist
 
 ### 🏪 Seller Features
@@ -365,6 +372,22 @@ GET    /api/inquiries/:id              - Get specific inquiry
 PATCH  /api/inquiries/:id              - Update inquiry status
 ```
 
+### RFQ (Request For Quotation)
+```
+GET    /api/rfq                        - Get all RFQs (buyer's RFQs)
+POST   /api/rfq                        - Create new RFQ
+GET    /api/rfq/:id                    - Get specific RFQ details
+PUT    /api/rfq/:id                    - Update RFQ
+DELETE /api/rfq/:id                    - Delete RFQ (draft only)
+GET    /api/rfq/:id/quotes             - Get all quotes for RFQ
+POST   /api/rfq/:id/quotes             - Submit quote (seller)
+GET    /api/rfq/seller/quotes          - Get seller's submitted quotes
+PATCH  /api/rfq/:rfqId/quotes/:quoteId - Update quote status
+POST   /api/rfq/:id/negotiate          - Send counter-offer
+GET    /api/rfq/:id/negotiations       - Get negotiation history
+POST   /api/rfq/:id/select-quote       - Accept a quote
+```
+
 ### Chat & Messages
 ```
 GET    /api/messages/conversations     - Get chat conversations
@@ -469,6 +492,108 @@ DELETE /api/wishlist/:productId        - Remove from wishlist
 }
 ```
 
+### RFQ Model
+```javascript
+{
+  _id: ObjectId,
+  rfqNumber: String (unique), // RFQ-2026-001
+  buyer: ObjectId (ref: User),
+  
+  title: String,
+  description: String,
+  category: String,
+  
+  specifications: {
+    quantity: Number,
+    unit: String (pieces, kg, meters, etc),
+    deliveryLocation: String,
+    deliveryDate: Date,
+    requiredBy: Date
+  },
+  
+  attachments: [String],  // File URLs for specifications, drawings
+  
+  budget: {
+    minPrice: Number (optional),
+    maxPrice: Number (optional),
+    preferredPricing: String
+  },
+  
+  paymentTerms: {
+    advancePercentage: Number,
+    creditDays: Number,
+    preferredPaymentMethod: String
+  },
+  
+  status: String, // draft, published, quoted, negotiating, closed, cancelled
+  
+  quotes: [
+    {
+      quoteId: ObjectId,
+      seller: ObjectId,
+      quotedPrice: Number,
+      validity: Date,
+      deliveryTime: String,
+      notes: String,
+      status: String // pending, accepted, rejected, negotiating
+    }
+  ],
+  
+  selectedQuote: ObjectId (optional),
+  selectedSeller: ObjectId (optional),
+  
+  negotiations: [
+    {
+      negotiationId: ObjectId,
+      initiator: ObjectId (buyer or seller),
+      proposedPrice: Number,
+      proposedTerms: Object,
+      status: String, // proposed, accepted, rejected, counter-offered
+      message: String,
+      timestamp: Date
+    }
+  ],
+  
+  createdAt: Date,
+  updatedAt: Date,
+  closedAt: Date (optional)
+}
+```
+
+### Quote Model
+```javascript
+{
+  _id: ObjectId,
+  rfq: ObjectId (ref: RFQ),
+  seller: ObjectId (ref: User),
+  
+  quotedPrice: Number,
+  currency: String (INR),
+  
+  delivery: {
+    estimatedDays: Number,
+    location: String,
+    method: String (Courier, FOB, CIF, etc)
+  },
+  
+  paymentTerms: {
+    advance: Number,
+    creditDays: Number,
+    preferredMethod: String
+  },
+  
+  validity: Date,
+  
+  notes: String,
+  attachments: [String],  // Pro forma invoice, specifications
+  
+  status: String, // pending, accepted, rejected, negotiating, withdrawn
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
 ## Frontend Components
 
 ### Product Detail Components
@@ -517,7 +642,51 @@ DELETE /api/wishlist/:productId        - Remove from wishlist
 
 ## Recent Enhancements
 
-### 1. Customization Request System (Latest)
+### 1. RFQ (Request For Quotation) System (Latest) ⭐
+**What will be implemented:**
+- Complete RFQ workflow from creation to quote selection
+- Buyer posts detailed buying requirements (quantity, specifications, delivery date)
+- Multiple sellers submit competing quotes
+- Buyers compare and negotiate with sellers
+- Negotiation counter-offers and price discussion
+- Quote acceptance and PO generation
+- Full RFQ history and analytics
+
+**Features:**
+- ✅ Create RFQ with file attachments (specs, drawings, images)
+- ✅ Set budget range and preferred payment terms
+- ✅ Auto-notify eligible sellers in category
+- ✅ Seller quote submission with delivery time
+- ✅ RFQ comparison view (all quotes side-by-side)
+- ✅ Price negotiation with counter-offers
+- ✅ Quote acceptance and order conversion
+- ✅ RFQ status tracking (draft, published, quoted, negotiating, closed)
+- ✅ RFQ board for buyers (create/manage RFQs)
+- ✅ RFQ board for sellers (browse/respond to RFQs)
+- ✅ Search & filter RFQs by category, budget, delivery date
+- ✅ Seller response rate analytics
+
+**Files to Create:**
+- `backend/src/models/RFQ.js` — RFQ schema with quotes & negotiations
+- `backend/src/models/Quote.js` — Quote submission model
+- `backend/src/controllers/rfqController.js` — RFQ CRUD operations
+- `backend/src/routes/rfqRoutes.js` — RFQ API endpoints
+- `frontend/src/app/rfq/page.tsx` — RFQ board (buyer & seller view)
+- `frontend/src/app/rfq/create/page.tsx` — Create new RFQ
+- `frontend/src/app/rfq/[id]/page.tsx` — RFQ detail with quotes
+- `frontend/src/components/rfq/RFQCard.tsx` — RFQ card component
+- `frontend/src/components/rfq/QuoteComparison.tsx` — Quote comparison view
+- `frontend/src/components/rfq/NegotiationModal.tsx` — Negotiation UI
+
+**Integration Points:**
+- Seller notifications when new RFQ in their category
+- Auto-assign RFQ to eligible sellers based on category & capabilities
+- Link selected quote → Purchase Order generation
+- Analytics dashboard for RFQ performance
+
+---
+
+### 2. Customization Request System
 **What was implemented:**
 - Complete end-to-end customization request flow
 - Logo file upload with preview (images and PDFs)
@@ -2417,7 +2586,175 @@ socket.emit('message:send', {
 
 ---
 
-#### <a name="bulk-upload"></a>9. Bulk Upload Testing
+#### <a name="rfq-system"></a>9. RFQ (Request For Quotation) Testing
+
+**Scenario:** Complete RFQ workflow from creation to order
+
+```
+✅ Step 1: Create RFQ (Buyer)
+   → Login as buyer
+   → Navigate to /rfq
+   → Click "Create New RFQ"
+   → Fill form:
+     * Title: "Solar Panels 100W - Bulk Order"
+     * Description: "Need high-efficiency solar panels"
+     * Category: "Electronics"
+     * Quantity: 500 units
+     * Delivery Location: "Mumbai"
+     * Required By: 30 days
+     * Budget: ₹50,000 - ₹60,000
+   → Upload attachment (spec sheet PDF)
+   → Click "Publish RFQ"
+   → Expected: RFQ published (status: published)
+   → Expected: RFQ number generated (RFQ-2026-001)
+
+✅ Step 2: RFQ Board (Seller View)
+   → Logout, login as seller
+   → Navigate to /rfq
+   → Expected: List of published RFQs
+   → See RFQ: "Solar Panels 100W - Bulk Order"
+   → Expected: Shows:
+     - Buyer name
+     - Quantity required
+     - Budget range
+     - Delivery deadline
+     - Category match indicator
+   → Click on RFQ
+
+✅ Step 3: Submit Quote (Seller)
+   → RFQ detail page opens
+   → See buyer requirements
+   → Click "Submit Quote"
+   → Enter:
+     * Quoted Price: ₹55,000
+     * Delivery Time: "20 days"
+     * Payment Terms: "50% advance, 50% on delivery"
+     * Notes: "Quality assured, ISO certified"
+   → Upload proforma invoice (PDF)
+   → Click "Submit Quote"
+   → Expected: Quote created (status: pending)
+   → Expected: Notification sent to buyer
+
+✅ Step 4: Multiple Quotes (Seller 2)
+   → Login as another seller
+   → Navigate to /rfq
+   → Find same RFQ
+   → Submit competing quote:
+     * Price: ₹52,000 (lower)
+     * Delivery: "25 days"
+   → Expected: Both sellers can submit quotes
+
+✅ Step 5: Compare Quotes (Buyer)
+   → Navigate to /rfq/<rfqId>
+   → Expected: All received quotes displayed
+   → See table:
+     | Seller | Price | Delivery | Payment | Rating |
+     | Seller1 | ₹55,000 | 20 days | 50/50 | ⭐⭐⭐⭐ |
+     | Seller2 | ₹52,000 | 25 days | 30/70 | ⭐⭐⭐ |
+   → Click "Compare" for detailed view
+
+✅ Step 6: Negotiate (Buyer)
+   → Click "Negotiate" on Seller1's quote
+   → Modal opens with negotiation form
+   → Enter counter-offer:
+     * Proposed Price: ₹53,000
+     * Message: "Can you match this price?"
+   → Click "Send Offer"
+   → Expected: Negotiation record created
+   → Expected: Notification sent to seller
+
+✅ Step 7: Accept Counter-Offer (Seller)
+   → Seller1 receives notification
+   → Navigate to /rfq/<rfqId>
+   → See negotiation counter-offer from buyer
+   → Review: ₹53,000 (from ₹55,000)
+   → Click "Accept Offer"
+   → Expected: Status changes to "negotiating → accepted"
+
+✅ Step 8: Select Quote (Buyer)
+   → See negotiated quote updated: ₹53,000
+   → Click "Accept This Quote"
+   → Expected: RFQ status: "closed"
+   → Expected: Selected quote marked as "accepted"
+
+✅ Step 9: Generate PO (Buyer)
+   → Click "Generate Purchase Order"
+   → PO form pre-filled with:
+     - RFQ details
+     - Quote details
+     - Final price: ₹53,000
+   → Confirm and create PO
+   → Expected: PO created with reference to RFQ
+   → Expected: Seller receives PO notification
+
+✅ Step 10: RFQ History
+   → Navigate to /buyer/rfqs
+   → Expected: RFQ shown in history
+   → Status: "closed" with ✅ completed
+   → Expected: Shows:
+     - Quotes received: 2
+     - Final price: ₹53,000
+     - Selected seller: Seller1 name
+     - PO generated: Yes
+```
+
+**API Testing:**
+```bash
+# Create RFQ
+curl -X POST http://localhost:8000/api/rfq \
+  -H "Authorization: Bearer <buyer-token>" \
+  -H "Content-Type: multipart/form-data" \
+  -F "title=Solar Panels 100W" \
+  -F "description=Bulk order" \
+  -F "category=electronics" \
+  -F "quantity=500" \
+  -F "deliveryDate=2026-07-19" \
+  -F "maxPrice=60000" \
+  -F "specifications=@spec.pdf"
+
+# Get all RFQs (buyer view)
+curl http://localhost:8000/api/rfq \
+  -H "Authorization: Bearer <buyer-token>"
+
+# Get seller's available RFQs (seller view)
+curl "http://localhost:8000/api/rfq?forSeller=true" \
+  -H "Authorization: Bearer <seller-token>"
+
+# Submit quote
+curl -X POST http://localhost:8000/api/rfq/<rfqId>/quotes \
+  -H "Authorization: Bearer <seller-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quotedPrice": 55000,
+    "deliveryDays": 20,
+    "paymentTerms": "50/50",
+    "notes": "ISO certified"
+  }'
+
+# Get all quotes for RFQ
+curl http://localhost:8000/api/rfq/<rfqId>/quotes \
+  -H "Authorization: Bearer <buyer-token>"
+
+# Send negotiation counter-offer
+curl -X POST http://localhost:8000/api/rfq/<rfqId>/negotiate \
+  -H "Authorization: Bearer <buyer-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quoteId": "<quoteId>",
+    "proposedPrice": 53000,
+    "message": "Can you match this?"
+  }'
+
+# Accept quote and close RFQ
+curl -X POST http://localhost:8000/api/rfq/<rfqId>/select-quote \
+  -H "Authorization: Bearer <buyer-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"quoteId": "<quoteId>"}'
+```
+
+---
+
+#### <a name="bulk-upload"></a>10. Bulk Upload Testing
 
 **Scenario:** Upload multiple products via CSV
 

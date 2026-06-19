@@ -31,6 +31,7 @@ import userRoutes from "./routes/userRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import customizationRoutes from "./routes/customization.js";
+import serviceRoutes from "./routes/serviceRoutes.js";
 
 // =============================================
 // Middleware Imports
@@ -205,6 +206,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/customizations", customizationRoutes);
+app.use("/api/services", serviceRoutes);
 
 // =============================================
 // 404 HANDLER — Route not found

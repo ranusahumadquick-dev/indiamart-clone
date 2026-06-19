@@ -16,6 +16,7 @@ const uploadDirs = [
   path.join(__dirname, "../../uploads/products"),
   path.join(__dirname, "../../uploads/customizations"),
   path.join(__dirname, "../../uploads/profiles"),
+  path.join(__dirname, "../../uploads/services"),
 ];
 
 uploadDirs.forEach((dir) => {
@@ -91,6 +92,18 @@ const profileStorage = multer.diskStorage({
   },
 });
 
+// Service images storage
+const serviceStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../../uploads/services"));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
+  },
+});
+
 // ────────────────────────────────────────────────────────────────────────────
 // MULTER INSTANCES
 // ────────────────────────────────────────────────────────────────────────────
@@ -119,6 +132,15 @@ export const profileUpload = multer({
   fileFilter: imageFileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
+  },
+});
+
+// Service images uploads
+export const serviceUpload = multer({
+  storage: serviceStorage,
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per file
   },
 });
 

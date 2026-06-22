@@ -150,25 +150,49 @@ export const createService = async (req, res, next) => {
     let images = [];
     let imageFiles = [];
 
+    console.log('\n' + '='.repeat(70));
+    console.log('🖼️  [SERVICE IMAGE UPLOAD DEBUG]');
+    console.log('='.repeat(70));
+    console.log('req.files exists:', !!req.files);
+    console.log('req.files type:', typeof req.files);
+    if (req.files) {
+      console.log('req.files keys:', Object.keys(req.files));
+      console.log('req.files.images exists:', !!req.files.images);
+    }
+
     if (req.files && req.files.images) {
       // Format 1: Correct - files grouped in 'images' array
+      console.log('✅ Using Format 1: req.files.images found');
       imageFiles = Array.isArray(req.files.images)
         ? req.files.images
         : [req.files.images];
+      console.log('   Image count:', imageFiles.length);
     } else if (req.files && Object.keys(req.files).length > 0) {
       // Format 2: Fallback - files indexed as numeric keys '0', '1', '2'
+      console.log('⚠️  Using Format 2: Numeric keys fallback');
       imageFiles = Object.keys(req.files)
         .filter(key => !isNaN(key))
         .sort((a, b) => parseInt(a) - parseInt(b))
         .map(key => req.files[key]);
+      console.log('   Collected image count:', imageFiles.length);
+    } else {
+      console.log('❌ No images found in req.files');
     }
 
     if (imageFiles && imageFiles.length > 0) {
-      images = imageFiles.map((file) => ({
-        url: `/uploads/services/${file.filename}`,
-        alt: serviceName,
-      }));
+      console.log('📝 Processing images...');
+      images = imageFiles.map((file, idx) => {
+        console.log(`   ${idx + 1}. Filename: ${file.filename}, Size: ${file.size}`);
+        return {
+          url: `/uploads/services/${file.filename}`,
+          alt: serviceName,
+        };
+      });
+      console.log('✅ Images array prepared:', images.length, 'images');
     }
+
+    console.log('📊 Final images array to save:', images);
+    console.log('='.repeat(70) + '\n');
 
     // Create service
     const service = await Service.create({

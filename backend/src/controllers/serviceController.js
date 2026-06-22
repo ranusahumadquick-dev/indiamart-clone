@@ -146,13 +146,24 @@ export const createService = async (req, res, next) => {
       throw new ApiError(404, 'User not found');
     }
 
-    // Handle uploaded images
+    // Handle uploaded images - support both formats (correct and numeric keys fallback)
     let images = [];
+    let imageFiles = [];
+
     if (req.files && req.files.images) {
-      const imageFiles = Array.isArray(req.files.images)
+      // Format 1: Correct - files grouped in 'images' array
+      imageFiles = Array.isArray(req.files.images)
         ? req.files.images
         : [req.files.images];
+    } else if (req.files && Object.keys(req.files).length > 0) {
+      // Format 2: Fallback - files indexed as numeric keys '0', '1', '2'
+      imageFiles = Object.keys(req.files)
+        .filter(key => !isNaN(key))
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map(key => req.files[key]);
+    }
 
+    if (imageFiles && imageFiles.length > 0) {
       images = imageFiles.map((file) => ({
         url: `/uploads/services/${file.filename}`,
         alt: serviceName,
@@ -241,18 +252,31 @@ export const updateService = async (req, res, next) => {
       }
     });
 
-    // Handle new images
-    if (req.files && req.files.images) {
-      const imageFiles = Array.isArray(req.files.images)
-        ? req.files.images
-        : [req.files.images];
+    // Handle new images - support both formats
+    if (req.files) {
+      let imageFiles = [];
 
-      const newImages = imageFiles.map((file) => ({
-        url: `/uploads/services/${file.filename}`,
-        alt: service.serviceName,
-      }));
+      if (req.files.images) {
+        // Format 1: Correct - files grouped in 'images' array
+        imageFiles = Array.isArray(req.files.images)
+          ? req.files.images
+          : [req.files.images];
+      } else if (Object.keys(req.files).length > 0) {
+        // Format 2: Fallback - files indexed as numeric keys
+        imageFiles = Object.keys(req.files)
+          .filter(key => !isNaN(key))
+          .sort((a, b) => parseInt(a) - parseInt(b))
+          .map(key => req.files[key]);
+      }
 
-      service.images = newImages;
+      if (imageFiles && imageFiles.length > 0) {
+        const newImages = imageFiles.map((file) => ({
+          url: `/uploads/services/${file.filename}`,
+          alt: service.serviceName,
+        }));
+
+        service.images = newImages;
+      }
     }
 
     const updatedService = await service.save();

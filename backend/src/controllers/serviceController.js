@@ -63,13 +63,51 @@ export const getAllServices = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // Ensure all services have proper image URLs
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const servicesWithImages = services.map(service => {
+      const serviceObj = service.toObject();
+
+      // Ensure images array and URLs are correct
+      if (!serviceObj.images || serviceObj.images.length === 0) {
+        serviceObj.images = [];
+      } else {
+        serviceObj.images = serviceObj.images.map(img => {
+          if (!img.url) {
+            return img;
+          }
+
+          // If URL doesn't have full backend URL, add it
+          if (!img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+            };
+          }
+
+          return img;
+        });
+      }
+
+      return serviceObj;
+    });
+
+    console.log('✅ [Services API] Returning', servicesWithImages.length, 'services with images:');
+    servicesWithImages.slice(0, 1).forEach((s, idx) => {
+      console.log(`   Service ${idx + 1}: ${s.serviceName}`);
+      console.log(`   - Images: ${s.images.length}`);
+      s.images.forEach((img, imgIdx) => {
+        console.log(`     Image ${imgIdx + 1}: ${img.url ? '✅' : '❌'} ${img.url || 'NO URL'}`);
+      });
+    });
+
     const total = await Service.countDocuments(filter);
 
     res.status(200).json(
       new ApiResponse(
         200,
         {
-          services,
+          services: servicesWithImages,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -100,8 +138,35 @@ export const getServiceById = async (req, res, next) => {
       throw new ApiError(404, 'Service not found');
     }
 
+    // Ensure image URLs are complete
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const serviceObj = service.toObject();
+
+    if (!serviceObj.images) {
+      serviceObj.images = [];
+    } else {
+      serviceObj.images = serviceObj.images.map(img => {
+        if (!img.url) return img;
+
+        if (!img.url.startsWith('http')) {
+          return {
+            ...img,
+            url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+          };
+        }
+
+        return img;
+      });
+    }
+
+    console.log(`✅ [Service Details] ${serviceObj.serviceName}`);
+    console.log(`   Images: ${serviceObj.images.length}`);
+    serviceObj.images.forEach((img, idx) => {
+      console.log(`   - Image ${idx + 1}: ${img.url}`);
+    });
+
     res.status(200).json(
-      new ApiResponse(200, service, 'Service fetched successfully')
+      new ApiResponse(200, serviceObj, 'Service fetched successfully')
     );
   } catch (error) {
     next(error);
@@ -358,6 +423,31 @@ export const getProviderServices = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // Ensure image URLs are complete
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const servicesWithImages = services.map(service => {
+      const serviceObj = service.toObject();
+
+      if (!serviceObj.images) {
+        serviceObj.images = [];
+      } else {
+        serviceObj.images = serviceObj.images.map(img => {
+          if (!img.url) return img;
+
+          if (!img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+            };
+          }
+
+          return img;
+        });
+      }
+
+      return serviceObj;
+    });
+
     const total = await Service.countDocuments({
       'provider.userId': providerId,
       isActive: true,
@@ -367,7 +457,7 @@ export const getProviderServices = async (req, res, next) => {
       new ApiResponse(
         200,
         {
-          services,
+          services: servicesWithImages,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -407,13 +497,38 @@ export const getMyServices = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // Ensure image URLs are complete
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const servicesWithImages = services.map(service => {
+      const serviceObj = service.toObject();
+
+      if (!serviceObj.images) {
+        serviceObj.images = [];
+      } else {
+        serviceObj.images = serviceObj.images.map(img => {
+          if (!img.url) return img;
+
+          if (!img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+            };
+          }
+
+          return img;
+        });
+      }
+
+      return serviceObj;
+    });
+
     const total = await Service.countDocuments(filter);
 
     res.status(200).json(
       new ApiResponse(
         200,
         {
-          services,
+          services: servicesWithImages,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -426,8 +541,8 @@ export const getMyServices = async (req, res, next) => {
               'provider.userId': userId,
               status: 'active',
             }),
-            totalViews: services.reduce((sum, s) => sum + (s.views || 0), 0),
-            totalInquiries: services.reduce((sum, s) => sum + (s.inquiries || 0), 0),
+            totalViews: servicesWithImages.reduce((sum, s) => sum + (s.views || 0), 0),
+            totalInquiries: servicesWithImages.reduce((sum, s) => sum + (s.inquiries || 0), 0),
           },
         },
         'Your services fetched successfully'
@@ -479,6 +594,31 @@ export const getServicesByCategory = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // Ensure image URLs are complete
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const servicesWithImages = services.map(service => {
+      const serviceObj = service.toObject();
+
+      if (!serviceObj.images) {
+        serviceObj.images = [];
+      } else {
+        serviceObj.images = serviceObj.images.map(img => {
+          if (!img.url) return img;
+
+          if (!img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+            };
+          }
+
+          return img;
+        });
+      }
+
+      return serviceObj;
+    });
+
     const total = await Service.countDocuments({
       category,
       isActive: true,
@@ -489,7 +629,7 @@ export const getServicesByCategory = async (req, res, next) => {
       new ApiResponse(
         200,
         {
-          services,
+          services: servicesWithImages,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -530,6 +670,31 @@ export const searchServices = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
+    // Ensure image URLs are complete
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    const servicesWithImages = services.map(service => {
+      const serviceObj = service.toObject();
+
+      if (!serviceObj.images) {
+        serviceObj.images = [];
+      } else {
+        serviceObj.images = serviceObj.images.map(img => {
+          if (!img.url) return img;
+
+          if (!img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: `${backendUrl}${img.url.startsWith('/') ? '' : '/'}${img.url}`
+            };
+          }
+
+          return img;
+        });
+      }
+
+      return serviceObj;
+    });
+
     const total = await Service.countDocuments({
       $or: [
         { serviceName: { $regex: query, $options: 'i' } },
@@ -544,7 +709,7 @@ export const searchServices = async (req, res, next) => {
       new ApiResponse(
         200,
         {
-          services,
+          services: servicesWithImages,
           pagination: {
             page: Number(page),
             limit: Number(limit),

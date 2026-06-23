@@ -181,10 +181,11 @@ export const createService = async (req, res, next) => {
 
     if (imageFiles && imageFiles.length > 0) {
       console.log('📝 Processing images...');
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
       images = imageFiles.map((file, idx) => {
         console.log(`   ${idx + 1}. Filename: ${file.filename}, Size: ${file.size}`);
         return {
-          url: `/uploads/services/${file.filename}`,
+          url: `${backendUrl}/uploads/services/${file.filename}`,
           alt: serviceName,
         };
       });
@@ -294,8 +295,9 @@ export const updateService = async (req, res, next) => {
       }
 
       if (imageFiles && imageFiles.length > 0) {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
         const newImages = imageFiles.map((file) => ({
-          url: `/uploads/services/${file.filename}`,
+          url: `${backendUrl}/uploads/services/${file.filename}`,
           alt: service.serviceName,
         }));
 

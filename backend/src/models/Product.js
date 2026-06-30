@@ -710,7 +710,7 @@ const productSchema = new mongoose.Schema(
     variants: [
       {
         _id: mongoose.Schema.Types.ObjectId,
-        sku: { type: String, unique: true, sparse: true },
+        sku: { type: String, sparse: true },
         name: { type: String },
         attributeValues: {
           type: Map,

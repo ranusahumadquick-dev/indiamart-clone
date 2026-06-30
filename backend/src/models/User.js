@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema(
       unique: true,
       match: [/^[6-9]\d{9}$/, "Please enter a valid Indian phone number"],
     },
+    isMobileVerified: {
+      type: Boolean,
+      default: false,
+    },
 
     // --- Role & Type ---
     role: {
@@ -107,13 +111,38 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: "" },
     addresses: [addressSchema],
 
+    // --- GST Verification ---
+    gstRegDate:     { type: Date },
+    gstVerified:    { type: Boolean, default: false },
+    gstAge:         { type: Number }, // years
+
+    // --- Seller Documents ---
+    sellerDocs: {
+      itr:          { type: String, default: "" }, // file URL
+      caCertificate:{ type: String, default: "" },
+      bankStatement:{ type: String, default: "" },
+      uploadedAt:   { type: Date },
+    },
+
+    // --- Seller Approval Status ---
+    // pending → under_review → approved / rejected
+    sellerStatus: {
+      type: String,
+      enum: ["pending", "under_review", "approved", "rejected"],
+      default: "pending",
+    },
+    sellerStatusNote:    { type: String, trim: true }, // admin rejection reason
+    sellerStatusUpdatedAt: { type: Date },
+    sellerApprovedBy:    { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
     // --- Verification ---
     isVerified: { type: Boolean, default: false },
     isEmailVerified: { type: Boolean, default: false },
     isPhoneVerified: { type: Boolean, default: false },
+    isMobileVerified: { type: Boolean, default: false },
     verificationRequested: { type: Boolean, default: false },
     verificationRequestedAt: { type: Date },
-    verificationNote: { type: String, trim: true }, // seller's note when requesting
+    verificationNote: { type: String, trim: true },
 
     // --- Tokens ---
     refreshToken: { type: String, select: false },

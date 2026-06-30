@@ -32,6 +32,10 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import customizationRoutes from "./routes/customization.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
+import otpRoutes from "./routes/otpRoutes.js";
+import settingRoutes from "./routes/settingRoutes.js";
+import sellerVerifyRoutes from "./routes/sellerVerifyRoutes.js";
+import itrCertificateRoutes from "./routes/itrCertificateRoutes.js";
 
 // =============================================
 // Middleware Imports
@@ -186,6 +190,10 @@ app.use("/api/", limiter);
 // API ROUTES
 // =============================================
 app.use("/api/auth", authRoutes);
+app.use("/api/otp", otpRoutes);
+app.use("/api/settings", settingRoutes);
+app.use("/api/seller-verify", sellerVerifyRoutes);
+app.use("/api/itr-certificates", itrCertificateRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/inquiries", inquiryRoutes);

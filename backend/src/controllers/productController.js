@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import Category from "../models/Category.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -194,8 +195,57 @@ const getAllProducts = asyncHandler(async (req, res) => {
   // Build filters
   const filters = { isActive: true, status: "approved" };
 
-  if (category) filters.category = category;
-  if (subCategory) filters.subCategory = subCategory;
+  // Category filter — resolve name/slug to ObjectId
+  if (category) {
+    // Check if it's already a valid ObjectId
+    const isObjectId = /^[a-f\d]{24}$/i.test(category);
+    if (isObjectId) {
+      filters.category = category;
+    } else {
+      // Look up by slug first, then by name (case-insensitive)
+      const categoryDoc = await Category.findOne({
+        $or: [
+          { slug: category.toLowerCase() },
+          { slug: category.toLowerCase().replace(/\s+/g, "-") },
+          { name: { $regex: `^${category}$`, $options: "i" } },
+        ],
+      }).select("_id");
+
+      if (categoryDoc) {
+        filters.category = categoryDoc._id;
+      } else {
+        // Try parent categories to match all subcategories
+        const parentCat = await Category.findOne({
+          name: { $regex: category, $options: "i" },
+        }).select("_id");
+        if (parentCat) {
+          // Get all subcategory IDs under this parent
+          const subCats = await Category.find({ parentCategory: parentCat._id }).select("_id");
+          const allIds = [parentCat._id, ...subCats.map((s) => s._id)];
+          filters.category = { $in: allIds };
+        }
+        // If no category found at all, return empty results
+        else {
+          filters.category = null;
+        }
+      }
+    }
+  }
+
+  if (subCategory) {
+    const isObjectId = /^[a-f\d]{24}$/i.test(subCategory);
+    if (isObjectId) {
+      filters.subCategory = subCategory;
+    } else {
+      const subCatDoc = await Category.findOne({
+        $or: [
+          { slug: subCategory.toLowerCase() },
+          { name: { $regex: `^${subCategory}$`, $options: "i" } },
+        ],
+      }).select("_id");
+      if (subCatDoc) filters.subCategory = subCatDoc._id;
+    }
+  }
   if (isFeatured === "true") filters.isFeatured = true;
   if (minRating) filters.averageRating = { $gte: Number(minRating) };
   if (city) filters.city = { $regex: city, $options: "i" };
@@ -531,7 +581,36 @@ const searchProducts = asyncHandler(async (req, res) => {
     filters.$text = { $search: q };
   }
 
-  if (category) filters.category = category;
+  // Category filter — resolve name/slug to ObjectId
+  if (category) {
+    const isObjectId = /^[a-f\d]{24}$/i.test(category);
+    if (isObjectId) {
+      filters.category = category;
+    } else {
+      const categoryDoc = await Category.findOne({
+        $or: [
+          { slug: category.toLowerCase() },
+          { slug: category.toLowerCase().replace(/\s+/g, "-") },
+          { name: { $regex: `^${category}$`, $options: "i" } },
+        ],
+      }).select("_id");
+
+      if (categoryDoc) {
+        filters.category = categoryDoc._id;
+      } else {
+        const parentCat = await Category.findOne({
+          name: { $regex: category, $options: "i" },
+        }).select("_id");
+        if (parentCat) {
+          const subCats = await Category.find({ parentCategory: parentCat._id }).select("_id");
+          filters.category = { $in: [parentCat._id, ...subCats.map((s) => s._id)] };
+        } else {
+          filters.category = null;
+        }
+      }
+    }
+  }
+
   if (city) filters.city = { $regex: city, $options: "i" };
   if (minRating) filters.averageRating = { $gte: Number(minRating) };
 

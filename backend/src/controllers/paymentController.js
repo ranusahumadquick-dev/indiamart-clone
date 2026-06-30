@@ -544,6 +544,263 @@ const triggerSubscriptionExpiryCheck = asyncHandler(async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+// PRODUCT CHECKOUT PAYMENT APIs
+// ═══════════════════════════════════════════════════════════
+
+// POST /api/payments/checkout
+export const createCheckoutOrder = asyncHandler(async (req, res) => {
+  const { items, shippingAddress, couponCode, paymentMethod = "razorpay" } = req.body;
+  if (!items?.length) throw new ApiError(400, "Items are required");
+
+  const Product = (await import("../models/Product.js")).default;
+  let subtotal = 0;
+  const orderItems = [];
+
+  for (const item of items) {
+    const product = await Product.findById(item.productId).populate("seller", "name");
+    if (!product) throw new ApiError(404, `Product ${item.productId} not found`);
+    const qty = item.quantity || 1;
+    const unitPrice = product.price;
+    subtotal += unitPrice * qty;
+    orderItems.push({ product: product._id, name: product.name, image: product.images?.[0]?.url || "", qty, unitPrice, total: unitPrice * qty, seller: product.seller?._id });
+  }
+
+  const gstAmount = Math.round(subtotal * 0.18);
+  const shippingCharge = subtotal >= 5000 ? 0 : 99;
+
+  let discount = 0;
+  let couponApplied = null;
+  if (couponCode) {
+    const code = couponCode.toUpperCase();
+    if (code === "SAVE10") { discount = Math.round(subtotal * 0.10); couponApplied = "SAVE10"; }
+    else if (code === "FLAT500" && subtotal >= 2000) { discount = 500; couponApplied = "FLAT500"; }
+    else if (code === "SAVE5") { discount = Math.round(subtotal * 0.05); couponApplied = "SAVE5"; }
+  }
+
+  const totalAmount = subtotal + gstAmount + shippingCharge - discount;
+  if (totalAmount <= 0) throw new ApiError(400, "Invalid order amount");
+
+  const razorpay = getRazorpay();
+  const razorpayOrder = await razorpay.orders.create({
+    amount: Math.round(totalAmount * 100),
+    currency: "INR",
+    receipt: `order_${Date.now()}_${req.user._id.toString().slice(-6)}`,
+    notes: { userId: req.user._id.toString(), paymentFor: "product" },
+  });
+
+  const payment = await Payment.create({
+    razorpayOrderId: razorpayOrder.id,
+    userId: req.user._id,
+    amount: totalAmount,
+    currency: "INR",
+    paymentFor: "product",
+    status: "pending",
+    paymentMethod,
+    metadata: { subtotal, gstAmount, shippingCharge, discount, couponApplied, items: orderItems, shippingAddress },
+  });
+
+  return res.status(200).json(new ApiResponse(200, {
+    orderId: razorpayOrder.id,
+    paymentId: payment._id,
+    amount: razorpayOrder.amount,
+    currency: "INR",
+    key: process.env.RAZORPAY_KEY_ID,
+    breakdown: { subtotal, gstAmount, shippingCharge, discount, couponApplied, totalAmount },
+  }, "Checkout order created"));
+});
+
+// POST /api/payments/verify-checkout
+export const verifyCheckoutPayment = asyncHandler(async (req, res) => {
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, paymentId } = req.body;
+
+  const expectedSig = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .update(`${razorpayOrderId}|${razorpayPaymentId}`).digest("hex");
+  if (expectedSig !== razorpaySignature) throw new ApiError(400, "Payment verification failed");
+
+  const payment = await Payment.findById(paymentId);
+  if (!payment) throw new ApiError(404, "Payment not found");
+
+  payment.status = "completed";
+  payment.razorpayPaymentId = razorpayPaymentId;
+  payment.razorpaySignature = razorpaySignature;
+  payment.completedAt = new Date();
+  payment.invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  await payment.save();
+
+  const Order = (await import("../models/Order.js")).default;
+  const meta = payment.metadata || {};
+  const orderItems = (meta.items || []).map(i => ({
+    product: i.product, name: i.name, image: i.image, qty: i.qty, unitPrice: i.unitPrice, total: i.total,
+  }));
+
+  const order = await Order.create({
+    buyer: req.user._id,
+    seller: meta.items?.[0]?.seller,
+    items: orderItems,
+    totalAmount: payment.amount,
+    paymentId: payment._id,
+    paymentStatus: "paid",
+    status: "confirmed",
+    shippingAddress: meta.shippingAddress || {},
+  });
+
+  return res.status(200).json(new ApiResponse(200, { payment, order }, "Payment verified & order placed"));
+});
+
+// POST /api/payments/retry/:paymentId
+export const retryPayment = asyncHandler(async (req, res) => {
+  const payment = await Payment.findOne({ _id: req.params.paymentId, userId: req.user._id, status: "failed" });
+  if (!payment) throw new ApiError(404, "Failed payment not found");
+
+  const razorpay = getRazorpay();
+  const razorpayOrder = await razorpay.orders.create({
+    amount: Math.round(payment.amount * 100),
+    currency: "INR",
+    receipt: `retry_${Date.now()}`,
+    notes: { paymentFor: payment.paymentFor },
+  });
+
+  payment.razorpayOrderId = razorpayOrder.id;
+  payment.status = "pending";
+  await payment.save();
+
+  return res.status(200).json(new ApiResponse(200, {
+    orderId: razorpayOrder.id, paymentId: payment._id,
+    amount: razorpayOrder.amount, currency: "INR", key: process.env.RAZORPAY_KEY_ID,
+  }, "Retry order created"));
+});
+
+// GET /api/payments/my-transactions
+export const getMyTransactions = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const filter = { userId: req.user._id };
+  if (status) filter.status = status;
+
+  const [payments, total, stats] = await Promise.all([
+    Payment.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
+    Payment.countDocuments(filter),
+    Payment.aggregate([
+      { $match: { userId: req.user._id } },
+      { $group: { _id: "$status", count: { $sum: 1 }, total: { $sum: "$amount" } } },
+    ]),
+  ]);
+
+  return res.status(200).json(new ApiResponse(200, {
+    payments, total, page: Number(page), pages: Math.ceil(total / Number(limit)), stats,
+  }, "Transactions fetched"));
+});
+
+// GET /api/payments/seller/dashboard
+export const getSellerPaymentDashboard = asyncHandler(async (req, res) => {
+  const Order = (await import("../models/Order.js")).default;
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+  const sixMonthsAgo = new Date(now - 180 * 24 * 60 * 60 * 1000);
+
+  const [totalOrders, recentOrders, monthlyRevenue, statusBreakdown, chartData] = await Promise.all([
+    Order.countDocuments({ seller: req.user._id }),
+    Order.find({ seller: req.user._id }).sort({ createdAt: -1 }).limit(10).populate("buyer", "name email").lean(),
+    Order.aggregate([
+      { $match: { seller: req.user._id, paymentStatus: "paid", createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+    ]),
+    Order.aggregate([
+      { $match: { seller: req.user._id } },
+      { $group: { _id: "$paymentStatus", count: { $sum: 1 }, total: { $sum: "$totalAmount" } } },
+    ]),
+    Order.aggregate([
+      { $match: { seller: req.user._id, paymentStatus: "paid", createdAt: { $gte: sixMonthsAgo } } },
+      { $group: { _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } }, revenue: { $sum: "$totalAmount" }, orders: { $sum: 1 } } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+  ]);
+
+  return res.status(200).json(new ApiResponse(200, {
+    totalOrders, recentOrders, chartData,
+    monthlyRevenue: monthlyRevenue[0]?.total || 0,
+    monthlyOrders: monthlyRevenue[0]?.count || 0,
+    statusBreakdown,
+  }, "Dashboard fetched"));
+});
+
+// GET /api/payments/seller/orders
+export const getSellerOrders = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status, paymentStatus } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const Order = (await import("../models/Order.js")).default;
+
+  const filter = { seller: req.user._id };
+  if (status) filter.status = status;
+  if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit))
+      .populate("buyer", "name email phone").populate("paymentId").lean(),
+    Order.countDocuments(filter),
+  ]);
+
+  return res.status(200).json(new ApiResponse(200, {
+    orders, total, page: Number(page), pages: Math.ceil(total / Number(limit)),
+  }, "Orders fetched"));
+});
+
+// GET /api/payments/admin/all
+export const adminGetAllPayments = asyncHandler(async (req, res) => {
+  if (req.user.role !== "admin") throw new ApiError(403, "Admin only");
+  const { page = 1, limit = 15, status, paymentFor, search } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const filter = {};
+  if (status) filter.status = status;
+  if (paymentFor) filter.paymentFor = paymentFor;
+
+  const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+
+  const [payments, total, stats, totalRevenueArr, revenueChart] = await Promise.all([
+    Payment.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit))
+      .populate("userId", "name email role").lean(),
+    Payment.countDocuments(filter),
+    Payment.aggregate([{ $group: { _id: "$status", count: { $sum: 1 }, total: { $sum: "$amount" } } }]),
+    Payment.aggregate([{ $match: { status: "completed" } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+    Payment.aggregate([
+      { $match: { status: "completed", createdAt: { $gte: sixMonthsAgo } } },
+      { $group: { _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } }, revenue: { $sum: "$amount" }, count: { $sum: 1 } } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+  ]);
+
+  let filteredPayments = payments;
+  if (search) {
+    const s = search.toLowerCase();
+    filteredPayments = payments.filter(p =>
+      p.userId?.name?.toLowerCase().includes(s) ||
+      p.userId?.email?.toLowerCase().includes(s) ||
+      p.razorpayPaymentId?.includes(s) ||
+      p.invoiceNumber?.includes(s)
+    );
+  }
+
+  return res.status(200).json(new ApiResponse(200, {
+    payments: filteredPayments, total, page: Number(page), pages: Math.ceil(total / Number(limit)),
+    stats, totalRevenue: totalRevenueArr[0]?.total || 0, revenueChart,
+  }, "Admin payments fetched"));
+});
+
+// POST /api/payments/admin/refund/:paymentId
+export const adminProcessRefund = asyncHandler(async (req, res) => {
+  if (req.user.role !== "admin") throw new ApiError(403, "Admin only");
+  const payment = await Payment.findById(req.params.paymentId);
+  if (!payment) throw new ApiError(404, "Payment not found");
+  if (payment.status !== "completed") throw new ApiError(400, "Only completed payments can be refunded");
+
+  payment.status = "refunded";
+  await payment.save();
+
+  return res.status(200).json(new ApiResponse(200, { payment }, "Payment refunded"));
+});
+
 export {
   createRazorpayOrder, verifyPayment, getPaymentHistory,
   getSubscriptionPlans, getBuyerPlans,

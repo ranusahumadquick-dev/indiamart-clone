@@ -929,29 +929,76 @@ function EditProductContent() {
             <CityDropdown value={form.city} onChange={(v) => setForm({ ...form, city: v })} state={form.state} />
           </div>
 
-          {/* Active Toggle */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-800 text-sm">Product Status</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {form.isActive ? "Visible to buyers" : "Hidden from buyers"}
-                </p>
-              </div>
+          {/* Product Status Card */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-3">
+            <p className="font-semibold text-gray-800 text-sm">Product Status</p>
+
+            {/* Current status badge */}
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                product?.status === "approved" && form.isActive
+                  ? "bg-green-100 text-green-700"
+                  : product?.status === "pending"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : product?.status === "rejected"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}>
+                {product?.status === "approved" && form.isActive
+                  ? "✓ Live — Visible to buyers"
+                  : product?.status === "approved" && !form.isActive
+                  ? "Hidden"
+                  : product?.status === "pending"
+                  ? "⏳ Pending Review"
+                  : product?.status === "rejected"
+                  ? "✗ Rejected"
+                  : "Draft"}
+              </span>
+            </div>
+
+            {/* Publish / Unpublish button */}
+            {product?.status !== "approved" || !form.isActive ? (
               <button
                 type="button"
-                onClick={() => setForm({ ...form, isActive: !form.isActive })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  form.isActive ? "bg-green-500" : "bg-gray-300"
-                }`}
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await api.put(`/products/${productId}`, { status: "approved", isActive: true });
+                    setProduct((prev: any) => prev ? { ...prev, status: "approved" } : prev);
+                    setForm((prev) => ({ ...prev, isActive: true }));
+                    toast.success("Product published! Now visible to buyers.");
+                  } catch {
+                    toast.error("Failed to publish product.");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-60 flex items-center justify-center gap-2 text-sm"
               >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    form.isActive ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
+                🚀 Publish — Make Visible to Buyers
               </button>
-            </div>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await api.put(`/products/${productId}`, { isActive: false });
+                    setForm((prev) => ({ ...prev, isActive: false }));
+                    toast.success("Product hidden from buyers.");
+                  } catch {
+                    toast.error("Failed to update.");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="w-full border border-gray-300 text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-50 transition text-sm"
+              >
+                Hide from Buyers
+              </button>
+            )}
           </div>
 
           {/* Actions */}

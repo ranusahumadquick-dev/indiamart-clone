@@ -1,218 +1,126 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { HiOutlineArrowRight } from "react-icons/hi2";
 import api from "@/lib/axios";
-
-interface SubCategory {
-  _id: string;
-  name: string;
-  slug: string;
-  image?: string;
-}
 
 interface Category {
   _id: string;
   name: string;
   slug: string;
-  image?: string;
   icon?: string;
-  subcategories?: SubCategory[];
+  productCount?: number;
 }
 
-// Fallback category images (Unsplash free-to-use)
-const CATEGORY_IMAGES: Record<string, string> = {
-  default: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80",
-  electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80",
-  machinery: "https://images.unsplash.com/photo-1565793979498-a23b69f1e65f?w=400&q=80",
-  textile: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
-  food: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80",
-  pharma: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&q=80",
-  construction: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80",
-  automobile: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80",
-  chemical: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&q=80",
-  furniture: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80",
-  sports: "https://images.unsplash.com/photo-1461897104016-0b3b00cc81ee?w=400&q=80",
-  agriculture: "https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=400&q=80",
-  medical: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&q=80",
-};
-
-// Sub-category fallback images for the 6 grid cards
-const SUB_IMAGES = [
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=200&q=70",
-  "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200&q=70",
-  "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=200&q=70",
-  "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=200&q=70",
-  "https://images.unsplash.com/photo-1590247813693-5541d1c609fd?w=200&q=70",
-  "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&q=70",
+const CATEGORIES = [
+  { _id: "1", name: "Electronics", slug: "electronics", icon: "🔌", productCount: 5200, gradient: "from-blue-500 to-blue-600", light: "bg-blue-50 border-blue-200 hover:border-blue-400", iconBg: "bg-blue-100" },
+  { _id: "2", name: "Machinery", slug: "machinery", icon: "⚙️", productCount: 3800, gradient: "from-slate-500 to-slate-600", light: "bg-slate-50 border-slate-200 hover:border-slate-400", iconBg: "bg-slate-100" },
+  { _id: "3", name: "Textiles", slug: "textiles", icon: "🧵", productCount: 4100, gradient: "from-pink-500 to-rose-600", light: "bg-pink-50 border-pink-200 hover:border-pink-400", iconBg: "bg-pink-100" },
+  { _id: "4", name: "Chemicals", slug: "chemicals", icon: "🧪", productCount: 2900, gradient: "from-emerald-500 to-emerald-600", light: "bg-emerald-50 border-emerald-200 hover:border-emerald-400", iconBg: "bg-emerald-100" },
+  { _id: "5", name: "Food & Agro", slug: "food", icon: "🌾", productCount: 3500, gradient: "from-amber-500 to-amber-600", light: "bg-amber-50 border-amber-200 hover:border-amber-400", iconBg: "bg-amber-100" },
+  { _id: "6", name: "Construction", slug: "building", icon: "🏗️", productCount: 2700, gradient: "from-orange-500 to-orange-600", light: "bg-orange-50 border-orange-200 hover:border-orange-400", iconBg: "bg-orange-100" },
+  { _id: "7", name: "Packaging", slug: "packaging", icon: "📦", productCount: 1800, gradient: "from-indigo-500 to-indigo-600", light: "bg-indigo-50 border-indigo-200 hover:border-indigo-400", iconBg: "bg-indigo-100" },
+  { _id: "8", name: "Automobile", slug: "automobile", icon: "🚗", productCount: 2300, gradient: "from-red-500 to-red-600", light: "bg-red-50 border-red-200 hover:border-red-400", iconBg: "bg-red-100" },
+  { _id: "9", name: "Apparel", slug: "apparel", icon: "👔", productCount: 4600, gradient: "from-purple-500 to-purple-600", light: "bg-purple-50 border-purple-200 hover:border-purple-400", iconBg: "bg-purple-100" },
+  { _id: "10", name: "Pharma", slug: "pharma", icon: "💊", productCount: 1500, gradient: "from-teal-500 to-teal-600", light: "bg-teal-50 border-teal-200 hover:border-teal-400", iconBg: "bg-teal-100" },
+  { _id: "11", name: "Hardware", slug: "hardware", icon: "🔧", productCount: 2100, gradient: "from-cyan-500 to-cyan-600", light: "bg-cyan-50 border-cyan-200 hover:border-cyan-400", iconBg: "bg-cyan-100" },
+  { _id: "12", name: "Solar & Energy", slug: "solar", icon: "☀️", productCount: 900, gradient: "from-yellow-500 to-yellow-600", light: "bg-yellow-50 border-yellow-200 hover:border-yellow-400", iconBg: "bg-yellow-100" },
 ];
 
-function getCategoryImage(cat: Category): string {
-  if (cat.image) return cat.image;
-  const slug = cat.slug?.toLowerCase() || "";
-  for (const key of Object.keys(CATEGORY_IMAGES)) {
-    if (slug.includes(key)) return CATEGORY_IMAGES[key];
-  }
-  return CATEGORY_IMAGES.default;
-}
-
-function getSubImage(sub: SubCategory, index: number): string {
-  if (sub.image) return sub.image;
-  return SUB_IMAGES[index % SUB_IMAGES.length];
-}
-
-// Single category block — IndiaMART style
-function CategoryBlock({ cat }: { cat: Category }) {
-  const subs = cat.subcategories || [];
-  const leftSubs = subs.slice(6); // extra ones shown in left panel
-  const gridSubs = subs.slice(0, 6); // 6 cards in 2×3 grid
-
-  return (
-    <div className="border-t border-gray-200 pt-6 pb-2">
-      {/* Category title */}
-      <h2 className="text-xl font-bold text-gray-900 mb-4">{cat.name}</h2>
-
-      <div className="flex gap-3">
-        {/* LEFT — Banner panel */}
-        <div className="w-52 shrink-0 rounded-lg overflow-hidden relative min-h-[200px] hidden sm:block">
-          <img
-            src={getCategoryImage(cat)}
-            alt={cat.name}
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).src = CATEGORY_IMAGES.default; }}
-          />
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-
-          {/* Sub names on left panel */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-            <ul className="space-y-0.5 mb-3">
-              {leftSubs.slice(0, 5).map((s) => (
-                <li key={s._id}>
-                  <Link
-                    href={`/products?category=${s.slug}`}
-                    className="text-xs text-white/90 hover:text-white hover:underline leading-tight block truncate"
-                  >
-                    {s.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={`/products?category=${cat.slug}`}
-              className="inline-block bg-white text-gray-800 text-xs font-bold px-4 py-1.5 rounded hover:bg-gray-100 transition"
-            >
-              View All
-            </Link>
-          </div>
-        </div>
-
-        {/* RIGHT — 2×3 Subcategory grid */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {gridSubs.map((sub, i) => (
-            <Link
-              key={sub._id}
-              href={`/products?category=${sub.slug}`}
-              className="border border-gray-200 rounded-lg p-2.5 hover:border-[#0052cc] hover:shadow-sm transition group flex gap-2 items-start"
-            >
-              {/* Sub image */}
-              <div className="w-14 h-14 shrink-0 rounded overflow-hidden bg-gray-100">
-                <img
-                  src={getSubImage(sub, i)}
-                  alt={sub.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  onError={(e) => { (e.target as HTMLImageElement).src = SUB_IMAGES[i % SUB_IMAGES.length]; }}
-                />
-              </div>
-              {/* Sub name */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-[#0052cc] group-hover:underline truncate leading-tight">
-                  {sub.name}
-                </p>
-              </div>
-            </Link>
-          ))}
-
-          {/* If fewer than 6 subs, fill with a "View All" card */}
-          {gridSubs.length < 6 && (
-            <Link
-              href={`/products?category=${cat.slug}`}
-              className="border border-dashed border-gray-300 rounded-lg p-2.5 hover:border-[#0052cc] transition flex items-center justify-center text-xs text-[#0052cc] font-semibold"
-            >
-              View All →
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile View All link */}
-      <div className="sm:hidden mt-3">
-        <Link
-          href={`/products?category=${cat.slug}`}
-          className="text-xs text-[#0052cc] font-semibold hover:underline"
-        >
-          View All {cat.name} →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 export default function CategoriesSection() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(CATEGORIES);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get("/categories?limit=50").then((res) => {
-      const all: Category[] = res.data?.data?.categories || res.data?.data || [];
-      // Only parent categories (no parentCategory)
-      const parents = all.filter((c: any) => !c.parentCategory);
-      setCategories(parents.slice(0, 8)); // show max 8 category blocks
-    }).catch(() => {}).finally(() => setLoading(false));
+    api.get("/categories?limit=12").then((res) => {
+      if (res.data?.success && res.data?.data?.categories?.length > 0) {
+        setCategories(
+          res.data.data.categories.map((cat: Category, i: number) => ({
+            ...CATEGORIES[i % CATEGORIES.length],
+            ...cat,
+            icon: CATEGORIES[i % CATEGORIES.length].icon,
+          }))
+        );
+      }
+    }).catch(() => {});
   }, []);
 
-  if (loading) {
-    return (
-      <section className="py-8 bg-white">
-        <div className="max-w-7xl mx-auto px-4 space-y-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="border-t border-gray-200 pt-6">
-              <div className="h-6 bg-gray-200 rounded w-48 mb-4 animate-pulse" />
-              <div className="flex gap-3">
-                <div className="w-52 h-48 bg-gray-200 rounded-lg animate-pulse hidden sm:block" />
-                <div className="flex-1 grid grid-cols-3 gap-2">
-                  {[1,2,3,4,5,6].map((j) => (
-                    <div key={j} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (categories.length === 0) return null;
-
   return (
-    <section className="py-6 bg-white">
-      <div className="max-w-7xl mx-auto px-4 space-y-6">
-        {categories.map((cat) => (
-          <CategoryBlock key={cat._id} cat={cat} />
-        ))}
+    <section className="py-16 sm:py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Bottom CTA */}
-        <div className="border-t border-gray-200 pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-600">
-            Explore <strong>50M+</strong> products across <strong>100+</strong> categories from verified suppliers
-          </p>
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-1 w-8 bg-[#0052cc] rounded-full" />
+              <span className="text-[#0052cc] text-xs font-bold uppercase tracking-widest">Categories</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
+              Shop by Category
+            </h2>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base">
+              Explore 50M+ products across 100+ categories from verified suppliers
+            </p>
+          </div>
           <Link
             href="/categories"
-            className="bg-[#0052cc] text-white text-sm font-bold px-6 py-2.5 rounded hover:bg-[#003d99] transition"
+            className="inline-flex items-center gap-2 text-[#0052cc] font-semibold hover:gap-3 transition-all text-sm group"
           >
-            View All Categories →
+            View All Categories
+            <HiOutlineArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+
+        {/* Category Grid */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+          {categories.map((cat) => (
+            <Link
+              key={cat._id}
+              href={`/products?category=${cat.slug}`}
+              className={`group relative border-2 ${cat.light} rounded-2xl p-4 sm:p-5 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-2 overflow-hidden`}
+              onMouseEnter={() => setHoveredId(cat._id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              {/* Hover gradient overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
+
+              <div className="relative z-10">
+                {/* Icon */}
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 ${cat.iconBg} group-hover:bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:scale-110`}>
+                  <span className="text-2xl sm:text-3xl">{cat.icon}</span>
+                </div>
+
+                {/* Name */}
+                <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-white transition-colors duration-300 leading-tight">
+                  {cat.name}
+                </h3>
+
+                {/* Count */}
+                <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-white/70 transition-colors duration-300 mt-1">
+                  {((cat.productCount || 0) / 1000).toFixed(1)}K+ products
+                </p>
+              </div>
+
+              {/* Shimmer on hover */}
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 pointer-events-none" />
+            </Link>
+          ))}
+        </div>
+
+        {/* Bottom Banner */}
+        <div className="mt-10 bg-gradient-to-r from-[#0052cc] to-[#1a75ff] rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-white text-center sm:text-left">
+            <h3 className="text-lg sm:text-xl font-bold mb-1">Can't find what you need?</h3>
+            <p className="text-blue-100 text-sm">Post your requirement and get quotes from 100+ verified suppliers</p>
+          </div>
+          <Link
+            href="/post-requirement"
+            className="shrink-0 bg-white text-[#0052cc] font-bold px-6 py-3 rounded-xl hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2 text-sm"
+          >
+            Post Requirement
+            <HiOutlineArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>

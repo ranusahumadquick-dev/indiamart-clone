@@ -3,6 +3,7 @@
 import HeroSection from "@/components/home/HeroSection";
 import GuestWelcomePopup from "@/components/GuestWelcomePopup";
 import CategoriesSection from "@/components/home/CategoriesSection";
+import ProductShowcase from "@/components/home/ProductShowcase";
 import FeaturedProductsSection from "@/components/home/FeaturedProducts";
 import FeaturedServicesSection from "@/components/home/FeaturedServices";
 import TopSuppliersSection from "@/components/home/TopSuppliers";
@@ -20,10 +21,13 @@ export default function HomePage() {
       {/* 1. Hero with ticker + carousel */}
       <HeroSection />
 
-      {/* 2. Popular Categories */}
+      {/* 2. Shop by Category */}
       <CategoriesSection />
 
-      {/* 3. Featured Products */}
+      {/* 3. Product Showcase with category tabs */}
+      <ProductShowcase />
+
+      {/* 4. Featured Products */}
       <FeaturedProductsSection />
 
       {/* 4. Marketplace Statistics */}

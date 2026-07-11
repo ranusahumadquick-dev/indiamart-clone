@@ -35,7 +35,7 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // =============================================
   // REGISTER
   // =============================================
-  const register = useCallback(async (data: RegisterData) => {
+  const register = useCallback(async (data: RegisterData, redirectTo?: string) => {
     const res = await api.post("/auth/register", data);
     const { accessToken, user: newUser } = res.data.data;
 
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (newUser.role === "seller") {
       router.push("/seller-register");
     } else {
-      router.push("/buyer/dashboard");
+      router.push(redirectTo || "/buyer/dashboard");
     }
   }, [router]);
 

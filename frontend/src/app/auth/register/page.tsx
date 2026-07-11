@@ -64,6 +64,16 @@ function RegisterContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState("/");
+
+  // Inline phone OTP state
+  const [otpStep, setOtpStep] = useState<"idle" | "sent" | "verified">("idle");
+  const [otpValue, setOtpValue] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
 
   const strength = getPasswordStrength(form.password);
 
@@ -71,6 +81,7 @@ function RegisterContent() {
     if (!form.name.trim()) return false;
     if (!form.email.trim() || !isValidEmail(form.email)) return false;
     if (!form.phone.trim() || !isValidPhone(form.phone)) return false;
+    if (!phoneVerified) return false;
     if (!form.password || form.password.length < 6) return false;
     if (form.password !== form.confirmPassword) return false;
     if (!agreeTerms) return false;
@@ -78,14 +89,56 @@ function RegisterContent() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) router.push("/");
-  }, [isAuthenticated, router]);
+    if (isAuthenticated && !redirectUrl) router.push("/");
+  }, [isAuthenticated, router, redirectUrl]);
 
   useEffect(() => {
     const roleParam = searchParams.get("role");
+    const phoneParam = searchParams.get("phone");
+    const verifiedParam = searchParams.get("phoneVerified");
+    const redirectParam = searchParams.get("redirect");
     if (roleParam === "seller") setRole("seller");
     else if (roleParam === "buyer") setRole("buyer");
+    if (phoneParam) setForm((f) => ({ ...f, phone: phoneParam }));
+    if (verifiedParam === "true") setPhoneVerified(true);
+    if (redirectParam) setRedirectUrl(redirectParam);
   }, [searchParams]);
+
+  const startCountdown = () => {
+    setOtpCountdown(30);
+    const t = setInterval(() => {
+      setOtpCountdown((c) => { if (c <= 1) { clearInterval(t); return 0; } return c - 1; });
+    }, 1000);
+  };
+
+  const sendPhoneOTP = async () => {
+    setOtpError("");
+    if (!isValidPhone(form.phone)) { setOtpError("Enter a valid 10-digit mobile number first"); return; }
+    setOtpLoading(true);
+    try {
+      const res = await api.post("/otp/send-mobile", { phone: form.phone });
+      const dev = res.data?.data?.devOtp;
+      if (dev) { setDevOtp(dev); setOtpValue(dev); }
+      setOtpStep("sent");
+      startCountdown();
+    } catch (e: any) {
+      setOtpError(e?.response?.data?.message || "Failed to send OTP");
+    } finally { setOtpLoading(false); }
+  };
+
+  const verifyPhoneOTP = async () => {
+    setOtpError("");
+    if (otpValue.length !== 6) { setOtpError("Enter 6-digit OTP"); return; }
+    setOtpLoading(true);
+    try {
+      await api.post("/otp/verify-mobile", { phone: form.phone, otp: otpValue });
+      setOtpStep("verified");
+      setPhoneVerified(true);
+      setDevOtp(null);
+    } catch (e: any) {
+      setOtpError(e?.response?.data?.message || "Invalid OTP");
+    } finally { setOtpLoading(false); }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,10 +169,14 @@ function RegisterContent() {
           phone: form.phone.trim(),
           password: form.password,
           role: "buyer",
-        });
+        }, redirectUrl || "/");
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || "Registration failed");
+      const msg = err.response?.data?.message || err.message || "Registration failed";
+      toast.error(msg, { duration: 5000 });
+      if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("please login")) {
+        setTimeout(() => router.push(`/auth/login?redirect=${encodeURIComponent(redirectUrl)}`), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -136,11 +193,13 @@ function RegisterContent() {
               <span className="font-bold text-lg">IndiaMart</span>
             </div>
             <h1 className="text-xl font-bold">Create Your Account</h1>
-            <p className="text-blue-100 text-sm mt-1">Join India&apos;s largest B2B marketplace</p>
+            <p className="text-blue-100 text-sm mt-1">
+              {phoneVerified ? "Phone verified! Fill remaining details" : "Join India's largest B2B marketplace"}
+            </p>
           </div>
 
           <div className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               {/* Role Toggle */}
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -210,19 +269,108 @@ function RegisterContent() {
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <HiOutlinePhone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    className="w-full border border-gray-300 rounded-lg pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[var(--primary)] outline-none transition"
-                    placeholder="9876543210"
-                  />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Phone Number <span className="text-red-500">*</span>
+                  {phoneVerified && (
+                    <span className="ml-2 inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <HiOutlineCheckCircle className="w-3 h-3" /> Verified
+                    </span>
+                  )}
+                </label>
+
+                {/* Phone input + Send OTP button */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <HiOutlinePhone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      autoComplete="off"
+                      value={form.phone}
+                      readOnly={phoneVerified || otpStep === "sent"}
+                      onChange={(e) => {
+                        if (!phoneVerified && otpStep === "idle") {
+                          setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) });
+                          setOtpError("");
+                        }
+                      }}
+                      className={`w-full border rounded-lg pl-11 pr-4 py-2.5 text-sm outline-none transition ${
+                        phoneVerified
+                          ? "border-green-300 bg-green-50 text-green-800 cursor-not-allowed"
+                          : "border-gray-300 focus:ring-2 focus:ring-blue-100 focus:border-[var(--primary)]"
+                      }`}
+                      placeholder="9876543210"
+                    />
+                  </div>
+                  {/* Verify button — only show if not already verified from URL */}
+                  {!phoneVerified && otpStep !== "sent" && (
+                    <button
+                      type="button"
+                      onClick={sendPhoneOTP}
+                      disabled={otpLoading || form.phone.length !== 10}
+                      className="shrink-0 px-4 py-2.5 bg-[var(--primary)] text-white text-xs font-bold rounded-lg hover:bg-[var(--primary-dark)] disabled:opacity-50 transition whitespace-nowrap"
+                    >
+                      {otpLoading ? "Sending..." : "Get OTP"}
+                    </button>
+                  )}
+                  {otpStep === "sent" && (
+                    <button
+                      type="button"
+                      onClick={() => { setOtpStep("idle"); setOtpValue(""); setOtpError(""); setDevOtp(null); }}
+                      className="shrink-0 px-3 py-2.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-50 transition"
+                    >
+                      Change
+                    </button>
+                  )}
                 </div>
+
+                {/* OTP input row — shown after Send OTP */}
+                {otpStep === "sent" && (
+                  <div className="mt-2 space-y-2">
+                    {devOtp && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs text-amber-700 font-semibold">
+                        Dev OTP: <span className="tracking-widest font-black">{devOtp}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={otpValue}
+                        onChange={(e) => { setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6)); setOtpError(""); }}
+                        placeholder="Enter 6-digit OTP"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[var(--primary)] outline-none tracking-widest"
+                      />
+                      <button
+                        type="button"
+                        onClick={verifyPhoneOTP}
+                        disabled={otpLoading || otpValue.length !== 6}
+                        className="shrink-0 px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+                      >
+                        {otpLoading ? "..." : "Verify"}
+                      </button>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>OTP sent to +91-{form.phone}</span>
+                      {otpCountdown > 0 ? (
+                        <span>Resend in {otpCountdown}s</span>
+                      ) : (
+                        <button type="button" onClick={sendPhoneOTP} className="text-[var(--primary)] font-semibold hover:underline">
+                          Resend OTP
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {otpError && <p className="text-xs text-red-500 mt-1">{otpError}</p>}
+                {phoneVerified && (
+                  <p className="text-[11px] text-green-600 mt-1 flex items-center gap-1">
+                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> Mobile number verified via OTP
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -237,6 +385,7 @@ function RegisterContent() {
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg pl-11 pr-11 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[var(--primary)] outline-none transition"
                     placeholder="Min 6 characters"
+                    autoComplete="new-password"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {showPassword ? <HiOutlineEyeSlash className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
@@ -288,6 +437,7 @@ function RegisterContent() {
                         : "border-gray-300 focus:border-[var(--primary)]"
                     }`}
                     placeholder="Re-enter password"
+                    autoComplete="new-password"
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {showConfirmPassword ? <HiOutlineEyeSlash className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}

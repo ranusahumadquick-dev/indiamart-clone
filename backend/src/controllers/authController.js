@@ -15,11 +15,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "name, email, phone, password and role are required");
   }
 
-  // Check if email already exists
-  const existing = await User.findOne({ email: email.toLowerCase() });
-  if (existing) {
-    throw new ApiError(400, "Email already registered");
-  }
+  // Check if email or phone already exists
+  const existingEmail = await User.findOne({ email: email.toLowerCase() });
+  if (existingEmail) throw new ApiError(400, "Email already registered. Please login.");
+
+  const existingPhone = await User.findOne({ phone });
+  if (existingPhone) throw new ApiError(400, "Mobile number already registered. Please login with your existing account.");
 
   // Create user (password will be hashed by model pre-save)
   const user = await User.create({

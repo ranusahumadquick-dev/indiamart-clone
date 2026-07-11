@@ -58,12 +58,10 @@ export const sendMobileOTP = asyncHandler(async (req, res) => {
   const otp    = makeOTP();
   const result = await sendOTPSMS(raw, otp);
 
-  if (!result.success) {
-    // Return exact MSG91 error — never expose OTP
-    throw new ApiError(503, result.message || "SMS delivery failed. Try again.");
-  }
+  const smsConfigured = result.code !== "NOT_CONFIGURED";
+  const devMode = !smsConfigured;
 
-  // Save to MongoDB — OTP never leaves the server
+  // Always save OTP to DB regardless of SMS delivery
   await OtpSession.deleteMany({ phone: raw, isVerified: false });
   await OtpSession.create({
     phone:       raw,
@@ -71,15 +69,27 @@ export const sendMobileOTP = asyncHandler(async (req, res) => {
     expiresAt:   new Date(Date.now() + OTP_EXPIRY_MIN * 60 * 1000),
     resendCount: (prev?.resendCount || 0) + 1,
     lastSentAt:  new Date(),
-    provider:    "msg91",
+    provider:    devMode ? "dev" : "msg91",
   });
+
+  if (!result.success && smsConfigured) {
+    // SMS provider configured but delivery failed — real error
+    throw new ApiError(503, result.message || "SMS delivery failed. Try again.");
+  }
+
+  console.log(`[OTP] ${devMode ? "DEV MODE" : "SMS sent"} — +91${raw} → OTP: ${otp}`);
 
   return res.status(200).json(
     new ApiResponse(200, {
       phone:       mask(raw),
       expiresIn:   OTP_EXPIRY_MIN * 60,
       resendAfter: RESEND_COOLDOWN_SEC,
-    }, `OTP sent to your mobile number`)
+      // Show OTP on screen only when SMS not configured (dev/demo)
+      ...(devMode && { devOtp: otp, devNote: "SMS not configured — use this OTP" }),
+    }, devMode
+      ? `OTP generated (SMS not configured)`
+      : `OTP sent to your mobile number`
+    )
   );
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { useGuestVerify } from "@/contexts/GuestVerifyContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,7 @@ const RESEND_COOLDOWN = 30;
 export default function MobileOTPModal() {
   const { showModal, closeModal, markVerified } = useGuestVerify();
   const { user } = useAuth();
+  const router = useRouter();
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
@@ -17,6 +19,7 @@ export default function MobileOTPModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -32,6 +35,7 @@ export default function MobileOTPModal() {
       setOtp(["", "", "", "", "", ""]);
       setError("");
       setCountdown(0);
+      setDevOtp(null);
       if (timerRef.current) clearInterval(timerRef.current);
     } else {
       setTimeout(() => phoneRef.current?.focus(), 150);
@@ -58,7 +62,12 @@ export default function MobileOTPModal() {
     }
     setLoading(true);
     try {
-      await api.post("/otp/send-mobile", { phone: raw });
+      const res = await api.post("/otp/send-mobile", { phone: raw });
+      const dev = res.data?.data?.devOtp;
+      if (dev) {
+        setDevOtp(dev);
+        setOtp(dev.split(""));
+      }
       setStep("otp");
       startCountdown();
       setTimeout(() => otpRefs.current[0]?.focus(), 150);
@@ -76,11 +85,12 @@ export default function MobileOTPModal() {
     const raw = phone.replace(/\D/g, "");
     setLoading(true);
     try {
-      const res = await api.post("/otp/verify-mobile", { phone: raw, otp: code });
-      if (res.data?.data?.accessToken) {
-        localStorage.setItem("accessToken", res.data.data.accessToken);
-      }
-      markVerified();
+      await api.post("/otp/verify-mobile", { phone: raw, otp: code });
+      // Save return URL before closing modal
+      const returnUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+      closeModal();
+      // Go to signup — phone pre-filled & verified, come back to this page after signup
+      router.push(`/auth/register?phone=${raw}&phoneVerified=true&redirect=${encodeURIComponent(returnUrl)}`);
     } catch (e: any) {
       setError(e?.response?.data?.message || "Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
@@ -196,6 +206,13 @@ export default function MobileOTPModal() {
 
           {step === "otp" && (
             <div className="space-y-5">
+              {/* Dev mode OTP hint */}
+              {devOtp && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+                  <p className="text-[10px] text-amber-600 font-semibold">SMS not configured — Dev OTP:</p>
+                  <p className="text-lg font-black text-amber-700 tracking-widest">{devOtp}</p>
+                </div>
+              )}
               {/* OTP boxes */}
               <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
                 {otp.map((digit, i) => (

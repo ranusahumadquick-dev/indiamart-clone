@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ITR Acknowledgement - CoreTech Systems</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 13px;
+    padding: 50px 65px;
+    color: #000;
+    background: #fff;
+    line-height: 1.7;
+  }
+  .gov-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px double #1a3a8f;
+  }
+  .gov-header .emblem {
+    font-size: 38px;
+    margin-bottom: 4px;
+  }
+  .gov-header h1 { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #1a3a8f; }
+  .gov-header h2 { font-size: 13px; text-transform: uppercase; color: #333; margin-top: 2px; }
+  .gov-header .website { font-size: 11px; color: #555; margin-top: 3px; }
+
+  .cert-title {
+    text-align: center;
+    background: #1a3a8f;
+    color: #fff;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0;
+  }
+
+  .ack-box {
+    border: 2px solid #1a3a8f;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    background: #f0f4ff;
+    border-radius: 4px;
+  }
+  .ack-box .ack-title {
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #1a3a8f;
+    border-bottom: 1px solid #aab;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .ack-row { display: flex; margin: 4px 0; font-size: 12px; }
+  .ack-label { width: 220px; font-weight: bold; color: #333; flex-shrink: 0; }
+  .ack-value { flex: 1; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12px;
+  }
+  table th {
+    background: #1a3a8f;
+    color: #fff;
+    padding: 7px 12px;
+    text-align: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  table td {
+    border: 1px solid #bbb;
+    padding: 6px 12px;
+    text-align: center;
+  }
+  table tr:nth-child(even) td { background: #f5f8ff; }
+  table tr:last-child td { font-weight: bold; background: #dce8ff; }
+
+  .section-title {
+    font-weight: bold;
+    font-size: 13px;
+    text-decoration: underline;
+    text-transform: uppercase;
+    color: #1a3a8f;
+    margin: 18px 0 8px 0;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 20px;
+    margin-bottom: 16px;
+  }
+  .info-item { font-size: 12px; }
+  .info-item .label { font-weight: bold; color: #444; }
+
+  .status-badge {
+    display: inline-block;
+    background: #22c55e;
+    color: #fff;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  .barcode-section {
+    border: 1px solid #ccc;
+    padding: 12px;
+    text-align: center;
+    margin: 20px 0;
+    background: #fafafa;
+  }
+  .barcode { font-family: monospace; font-size: 28px; letter-spacing: 4px; color: #000; }
+  .barcode-text { font-size: 10px; color: #666; margin-top: 4px; }
+
+  .note-box {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #555;
+    margin: 16px 0;
+    font-style: italic;
+  }
+
+  .footer {
+    margin-top: 30px;
+    border-top: 2px solid #1a3a8f;
+    padding-top: 12px;
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer strong { color: #1a3a8f; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { padding: 30px 45px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Print Button -->
+<div class="no-print" style="margin-bottom:20px;text-align:right;">
+  <button onclick="window.print()"
+    style="background:#1a3a8f;color:#fff;padding:10px 24px;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:bold;">
+    🖨️ Print / Save as PDF
+  </button>
+  <p style="font-size:11px;color:#888;margin-top:5px;">Printer → Destination → Save as PDF</p>
+</div>
+
+<!-- Government Header -->
+<div class="gov-header">
+  <div class="emblem">🏛️</div>
+  <h1>Income Tax Department</h1>
+  <h2>Government of India — Ministry of Finance</h2>
+  <p class="website">www.incometax.gov.in | www.efiling.incometax.gov.in</p>
+</div>
+
+<!-- Certificate Title -->
+<div class="cert-title">
+  ITR Filing Acknowledgement Certificate — AY 2023-24
+</div>
+
+<!-- Acknowledgement Info Box -->
+<div class="ack-box">
+  <div class="ack-title">📄 Acknowledgement Details</div>
+  <div class="ack-row"><span class="ack-label">Acknowledgement Number:</span><span class="ack-value"><strong>123456789012345</strong></span></div>
+  <div class="ack-row"><span class="ack-label">Form Type:</span><span class="ack-value">ITR-6 (For Companies other than those claiming exemption under section 11)</span></div>
+  <div class="ack-row"><span class="ack-label">Assessment Year:</span><span class="ack-value">2023-2024 (FY 2022-23)</span></div>
+  <div class="ack-row"><span class="ack-label">Date of Filing:</span><span class="ack-value">31-07-2023 at 11:42:35 IST</span></div>
+  <div class="ack-row"><span class="ack-label">Filing Mode:</span><span class="ack-value">Online (e-Filing Portal)</span></div>
+  <div class="ack-row"><span class="ack-label">Filing Status:</span><span class="ack-value"><span class="status-badge">✓ FILED SUCCESSFULLY</span></span></div>
+  <div class="ack-row"><span class="ack-label">Verification Status:</span><span class="ack-value"><span class="status-badge">✓ e-VERIFIED (AADHAAR OTP)</span></span></div>
+</div>
+
+<!-- Taxpayer Details -->
+<p class="section-title">Taxpayer Information</p>
+<div class="info-grid">
+  <div class="info-item"><span class="label">Company Name: </span>CoreTech Systems Private Limited</div>
+  <div class="info-item"><span class="label">PAN: </span>CTCSP1234F</div>
+  <div class="info-item"><span class="label">CIN: </span>U74999KA2019PTC142104</div>
+  <div class="info-item"><span class="label">Incorporation Date: </span>15-01-2019</div>
+  <div class="info-item"><span class="label">Registered Address: </span>B-12, MIDC Industrial Area, Andheri East, Mumbai – 400093</div>
+  <div class="info-item"><span class="label">GSTIN: </span>27CTCSP1234F1Z5</div>
+  <div class="info-item"><span class="label">Business Type: </span>Private Limited Company</div>
+  <div class="info-item"><span class="label">Category: </span>Domestic Company</div>
+  <div class="info-item"><span class="label">Email: </span>accounts@coretechsystems.in</div>
+  <div class="info-item"><span class="label">Phone: </span>+91 98765 43210</div>
+</div>
+
+<!-- Income Details -->
+<p class="section-title">Income & Tax Details (FY 2022-23)</p>
+<table>
+  <thead>
+    <tr>
+      <th>Particulars</th>
+      <th>Amount (₹)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">Gross Total Income</td><td>45,00,000</td></tr>
+    <tr><td style="text-align:left;">Deductions under Chapter VI-A</td><td>6,50,000</td></tr>
+    <tr><td style="text-align:left;">Total Taxable Income</td><td>38,50,000</td></tr>
+    <tr><td style="text-align:left;">Tax on Total Income</td><td>8,00,000</td></tr>
+    <tr><td style="text-align:left;">Tax Paid (TDS + Advance Tax)</td><td>8,00,000</td></tr>
+    <tr><td style="text-align:left;font-weight:bold;">Balance Tax Payable / (Refund)</td><td><strong>NIL</strong></td></tr>
+  </tbody>
+</table>
+
+<!-- Year-wise Turnover -->
+<p class="section-title">Year-wise Revenue Summary</p>
+<table>
+  <thead>
+    <tr>
+      <th>Financial Year</th>
+      <th>Gross Revenue (₹)</th>
+      <th>Net Taxable Income (₹)</th>
+      <th>Tax Paid (₹)</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>FY 2020 – 21</td>
+      <td>18,50,000</td>
+      <td>14,20,000</td>
+      <td>2,80,000</td>
+      <td><span class="status-badge" style="background:#22c55e;font-size:10px;">Filed ✓</span></td>
+    </tr>
+    <tr>
+      <td>FY 2021 – 22</td>
+      <td>28,00,000</td>
+      <td>22,50,000</td>
+      <td>4,50,000</td>
+      <td><span class="status-badge" style="background:#22c55e;font-size:10px;">Filed ✓</span></td>
+    </tr>
+    <tr>
+      <td>FY 2022 – 23</td>
+      <td>38,00,000</td>
+      <td>30,80,000</td>
+      <td>6,20,000</td>
+      <td><span class="status-badge" style="background:#22c55e;font-size:10px;">Filed ✓</span></td>
+    </tr>
+    <tr>
+      <td>FY 2023 – 24</td>
+      <td>45,00,000</td>
+      <td>38,50,000</td>
+      <td>8,00,000</td>
+      <td><span class="status-badge" style="background:#22c55e;font-size:10px;">Filed ✓</span></td>
+    </tr>
+    <tr>
+      <td><strong>Total</strong></td>
+      <td><strong>1,29,50,000</strong></td>
+      <td><strong>1,06,00,000</strong></td>
+      <td><strong>21,50,000</strong></td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Barcode / QR -->
+<div class="barcode-section">
+  <div class="barcode">||| |||| ||| ||| ||||||| ||| ||||</div>
+  <div class="barcode-text">
+    Acknowledgement No: <strong>123456789012345</strong> |
+    PAN: <strong>CTCSP1234F</strong> |
+    AY: <strong>2023-24</strong> |
+    Filed: <strong>31-07-2023</strong>
+  </div>
+</div>
+
+<div class="note-box">
+  ⚠️ This acknowledgement is a computer-generated document and does not require a physical signature.
+  This document is valid for verification purposes. Please retain this for your records.
+  Generated from Income Tax e-Filing Portal (www.incometax.gov.in).
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <strong>Income Tax Department | Government of India</strong><br>
+  This certificate is issued for the purpose of <strong>IndiaMart B2B Marketplace Seller Verification</strong><br>
+  CPC Reference No: CPC/2324/P1/123456789 | Generated on: 31-07-2023 11:42:35 IST<br>
+  *** TEST DOCUMENT — For IndiaMart Seller Registration Testing Only ***
+</div>
+
+</body>
+</html>

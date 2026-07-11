@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'Fix: Save registration products to Product collection during seller signup *)",
+      "Bash(git commit -m 'Fix: Seller registration products - use dedicated /products/register-batch endpoint *)",
+      "Bash(grep -v \"console\\\\|log\\\\|//\\\\|updateProduct\\\\|deleteProduct\\\\|getAllProducts\\\\|search\\\\|featured\\\\|related\")",
+      "Bash(grep -v \"//\\\\|index\\\\|lowercase\\\\|unique\\\\|sparse\")",
+      "Bash(git commit -m 'Fix: Generate unique slugs for registration products to prevent insertMany failures *)",
+      "Bash(git commit -m 'Fix: Allow OTP-registered sellers to delete account without password *)",
+      "Bash(mkdir -p \"frontend/src/app/seller/customizations/[id]\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@82.112.238.13 \"cd ~/indiamart && git pull && cd frontend && npm run build 2>&1 | tail -20 && pm2 restart indiamart-frontend --update-env && pm2 restart indiamart-backend --update-env && echo 'DEPLOY DONE'\")",
+      "Bash(node -e ' *)",
+      "Bash(xargs grep -l \"products\\\\|Products\")",
+      "Bash(grep -rn \"categories/tree\\\\|\\\\/categories\" \"c:\\\\Users\\\\RANU\\\\Desktop\\\\indiamart\\\\backend\\\\src\\\\routes\")",
+      "Bash(mv \"C:UsersRANUDesktopindiamartfrontendsrcappsellerorders\" extra/)",
+      "Bash(mv \"C:UsersRANUDesktopindiamartfrontendsrcappsellerorderspage.tsx\" extra/)",
+      "Bash(mv scripts *)",
+      "Bash(mv md/CREDENTIALS.md extra/)",
+      "Bash(git remote *)",
+      "Bash(git count-objects *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\RANU\\Desktop\\indiamart\\frontend\\src\\app\\seller\\customizations"
+    ]
+  }
+}

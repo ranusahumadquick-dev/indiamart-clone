@@ -19,12 +19,10 @@ export default function MobileOTPModal() {
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
-  // If already logged in, just mark verified
   useEffect(() => {
-    if (showModal && user) {
-      markVerified();
-    }
+    if (showModal && user) markVerified();
   }, [showModal, user, markVerified]);
 
   useEffect(() => {
@@ -35,6 +33,8 @@ export default function MobileOTPModal() {
       setError("");
       setCountdown(0);
       if (timerRef.current) clearInterval(timerRef.current);
+    } else {
+      setTimeout(() => phoneRef.current?.focus(), 150);
     }
   }, [showModal]);
 
@@ -53,7 +53,7 @@ export default function MobileOTPModal() {
     setError("");
     const raw = phone.replace(/\D/g, "");
     if (!/^[6-9]\d{9}$/.test(raw)) {
-      setError("Please enter a valid 10-digit Indian mobile number.");
+      setError("Please enter a valid 10-digit mobile number");
       return;
     }
     setLoading(true);
@@ -61,7 +61,7 @@ export default function MobileOTPModal() {
       await api.post("/otp/send-mobile", { phone: raw });
       setStep("otp");
       startCountdown();
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      setTimeout(() => otpRefs.current[0]?.focus(), 150);
     } catch (e: any) {
       setError(e?.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -77,7 +77,6 @@ export default function MobileOTPModal() {
     setLoading(true);
     try {
       const res = await api.post("/otp/verify-mobile", { phone: raw, otp: code });
-      // If a real user account was returned, store token
       if (res.data?.data?.accessToken) {
         localStorage.setItem("accessToken", res.data.data.accessToken);
       }
@@ -85,7 +84,7 @@ export default function MobileOTPModal() {
     } catch (e: any) {
       setError(e?.response?.data?.message || "Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
-      otpRefs.current[0]?.focus();
+      setTimeout(() => otpRefs.current[0]?.focus(), 50);
     } finally {
       setLoading(false);
     }
@@ -93,9 +92,9 @@ export default function MobileOTPModal() {
 
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d?$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+    const next = [...otp];
+    next[index] = value;
+    setOtp(next);
     if (value && index < 5) otpRefs.current[index + 1]?.focus();
   };
 
@@ -103,13 +102,14 @@ export default function MobileOTPModal() {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus();
     }
+    if (e.key === "Enter" && otp.join("").length === 6) verifyOTP();
   };
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (pasted.length === 6) {
       setOtp(pasted.split(""));
-      otpRefs.current[5]?.focus();
+      setTimeout(() => otpRefs.current[5]?.focus(), 50);
     }
     e.preventDefault();
   };
@@ -117,142 +117,120 @@ export default function MobileOTPModal() {
   if (!showModal) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={closeModal}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-        {/* Top accent */}
-        <div className="h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600" />
+      <div className="relative w-full sm:max-w-sm bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden">
 
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 text-lg">🔐</span>
-                </div>
-                <h2 className="text-lg font-bold text-gray-900">Verify Your Mobile Number</h2>
-              </div>
-              <p className="text-sm text-gray-500 ml-10">
-                {step === "phone"
-                  ? "Verify to connect with sellers and view product details."
-                  : `OTP sent to +91 ${phone.replace(/\D/g, "")}`}
-              </p>
-            </div>
-            <button
-              onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        {/* Header */}
+        <div className="bg-[#1a5276] px-6 pt-6 pb-5 text-white text-center">
+          <button
+            onClick={closeModal}
+            className="absolute top-3 right-4 text-white/70 hover:text-white text-2xl leading-none"
+          >×</button>
+          <h2 className="text-lg font-bold">
+            {step === "phone" ? "Login to connect with suppliers" : "Enter OTP"}
+          </h2>
+          <p className="text-sm text-white/80 mt-1">
+            {step === "phone"
+              ? "Login to get verified sellers"
+              : `OTP sent to +91-${phone.replace(/\D/g, "")}`}
+          </p>
+        </div>
 
-          {/* Step: Phone */}
+        <div className="px-6 py-5">
           {step === "phone" && (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Mobile Number
-                </label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm font-medium">
-                    🇮🇳 +91
-                  </span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
-                      setError("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && sendOTP()}
-                    placeholder="Enter 10-digit mobile number"
-                    autoFocus
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+              {/* Phone input */}
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#1a5276] focus-within:border-transparent">
+                <div className="flex items-center gap-2 px-3 bg-gray-50 border-r border-gray-300 shrink-0">
+                  <span className="text-lg">🇮🇳</span>
+                  <span className="text-sm font-semibold text-gray-600">+91</span>
                 </div>
+                <input
+                  ref={phoneRef}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                    setError("");
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && sendOTP()}
+                  placeholder="Enter your mobile number"
+                  className="flex-1 px-3 py-3 text-sm outline-none bg-white"
+                />
               </div>
 
-              {error && (
-                <p className="text-sm text-red-600 flex items-center gap-1.5">
-                  <span>⚠️</span> {error}
-                </p>
-              )}
+              {/* Trust line */}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <svg className="w-4 h-4 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                </svg>
+                Your mobile number is safe with us
+              </div>
+
+              {error && <p className="text-xs text-red-500">{error}</p>}
 
               <button
                 onClick={sendOTP}
                 disabled={loading || phone.replace(/\D/g, "").length !== 10}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#3498db] text-white font-bold text-sm rounded-lg hover:bg-[#2980b9] transition disabled:opacity-50 disabled:cursor-not-allowed tracking-widest uppercase"
               >
-                {loading ? (
-                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending OTP...</>
-                ) : "Send OTP"}
+                {loading
+                  ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"/>Sending...</span>
+                  : "GET OTP"}
               </button>
 
-              <p className="text-xs text-center text-gray-400">
-                By continuing, you agree to receive an OTP on this number.
+              <p className="text-center text-xs text-gray-400">
+                Don't have an account?{" "}
+                <a href="/auth/register" className="text-[#1a5276] font-semibold hover:underline">
+                  Register here
+                </a>
               </p>
             </div>
           )}
 
-          {/* Step: OTP */}
           {step === "otp" && (
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-                  Enter 6-digit OTP
-                </label>
-                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => { otpRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className={`w-11 h-12 text-center text-lg font-bold border-2 rounded-xl focus:outline-none transition ${
-                        digit
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-300 focus:border-blue-500"
-                      }`}
-                    />
-                  ))}
-                </div>
+              {/* OTP boxes */}
+              <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className={`w-11 h-12 text-center text-xl font-bold border-2 rounded-xl outline-none transition ${
+                      digit ? "border-[#1a5276] bg-blue-50 text-[#1a5276]" : "border-gray-300 focus:border-[#1a5276]"
+                    }`}
+                  />
+                ))}
               </div>
 
-              {error && (
-                <p className="text-sm text-red-600 flex items-center justify-center gap-1.5">
-                  <span>⚠️</span> {error}
-                </p>
-              )}
+              {error && <p className="text-xs text-red-500 text-center">{error}</p>}
 
               <button
                 onClick={verifyOTP}
                 disabled={loading || otp.join("").length !== 6}
-                className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#3498db] text-white font-bold text-sm rounded-lg hover:bg-[#2980b9] transition disabled:opacity-50 disabled:cursor-not-allowed tracking-widest uppercase"
               >
-                {loading ? (
-                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Verifying...</>
-                ) : "✓ Verify OTP"}
+                {loading
+                  ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"/>Verifying...</span>
+                  : "VERIFY OTP"}
               </button>
 
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <button
                   onClick={() => { setStep("phone"); setOtp(["","","","","",""]); setError(""); }}
-                  className="text-gray-500 hover:text-gray-700 transition"
+                  className="text-[#1a5276] font-semibold hover:underline"
                 >
                   ← Change Number
                 </button>
@@ -261,19 +239,18 @@ export default function MobileOTPModal() {
                 ) : (
                   <button
                     onClick={async () => {
-                      setLoading(true);
-                      setError("");
+                      setLoading(true); setError("");
                       try {
                         await api.post("/otp/send-mobile", { phone: phone.replace(/\D/g, "") });
                         startCountdown();
                         setOtp(["","","","","",""]);
-                        otpRefs.current[0]?.focus();
+                        setTimeout(() => otpRefs.current[0]?.focus(), 50);
                       } catch (e: any) {
-                        setError(e?.response?.data?.message || "Failed to resend OTP.");
+                        setError(e?.response?.data?.message || "Failed to resend.");
                       } finally { setLoading(false); }
                     }}
                     disabled={loading}
-                    className="text-blue-600 hover:text-blue-800 font-medium transition disabled:opacity-50"
+                    className="text-[#1a5276] font-semibold hover:underline disabled:opacity-50"
                   >
                     Resend OTP
                   </button>
@@ -281,13 +258,13 @@ export default function MobileOTPModal() {
               </div>
             </div>
           )}
+        </div>
 
-          {/* Trust badges */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1">🔒 Secure</span>
-            <span className="flex items-center gap-1">✓ One-time verification</span>
-            <span className="flex items-center gap-1">📱 SMS OTP</span>
-          </div>
+        {/* Footer logo */}
+        <div className="px-6 pb-4 text-center">
+          <span className="text-xs font-bold text-[#1a5276] tracking-wide">
+            🏢 IndiaMART Clone — B2B Marketplace
+          </span>
         </div>
       </div>
     </div>

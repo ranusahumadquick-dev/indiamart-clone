@@ -21,6 +21,7 @@ import SellerShortlistButton from "@/components/ui/SellerShortlistButton";
 import ProductShare from "@/components/product/ProductShare";
 import ProductChatButton from "@/components/chat/ProductChatButton";
 import AdvancedProductDetailPage from "@/components/ProductDetail/AdvancedProductDetailPage";
+import { useGuestVerify } from "@/contexts/GuestVerifyContext";
 import {
   HiOutlineMapPin,
   HiStar,
@@ -191,7 +192,15 @@ interface Review {
 export default function ProductDetailPage() {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
+  const { isVerified, openModal } = useGuestVerify();
   const { addProduct } = useRecentlyViewed();
+
+  // Gate the entire product detail page for guests
+  useEffect(() => {
+    if (!user && !isVerified) {
+      openModal();
+    }
+  }, [user, isVerified, openModal]);
   const { addItem: addToCompare, removeItem: removeFromCompare, isInCompare } = useCompare();
   const { addItem: addToBulk, removeItem: removeFromBulk, isInBulk } = useBulkInquiry();
   const [product, setProduct] = useState<Product | null>(null);
@@ -379,6 +388,46 @@ export default function ProductDetailPage() {
       setStartingChat(false);
     }
   };
+
+  // ── Gate for unverified guests ──
+  if (!user && !isVerified) {
+    return (
+      <div className="relative min-h-screen">
+        {/* Blurred product preview */}
+        <div className="max-w-7xl mx-auto px-4 py-8 filter blur-sm pointer-events-none select-none">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="aspect-square bg-gray-200 rounded-xl" />
+            <div className="space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4" />
+              <div className="h-6 bg-gray-200 rounded w-1/2" />
+              <div className="h-10 bg-gray-200 rounded w-1/3" />
+              <div className="h-4 bg-gray-200 rounded w-full" />
+              <div className="h-4 bg-gray-200 rounded w-2/3" />
+              <div className="h-12 bg-blue-200 rounded w-full mt-4" />
+              <div className="h-12 bg-green-200 rounded w-full" />
+            </div>
+          </div>
+        </div>
+        {/* Tap to verify overlay */}
+        <div
+          className="absolute inset-0 flex items-center justify-center cursor-pointer"
+          onClick={() => openModal()}
+        >
+          <div className="bg-white rounded-xl shadow-lg px-8 py-6 text-center mx-4">
+            <div className="text-3xl mb-3">🔒</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Login to view product details</h3>
+            <p className="text-sm text-gray-500 mb-4">Verify your mobile number to connect with suppliers</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); openModal(); }}
+              className="bg-[#1a5276] text-white px-8 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#154360] transition"
+            >
+              Login / Verify Mobile
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Loading Skeleton ──
   if (loading) {

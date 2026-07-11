@@ -13,6 +13,7 @@ import WriteReviewModal from "./WriteReviewModal";
 import { useCompare } from "@/contexts/CompareContext";
 import { useBulkInquiry } from "@/contexts/BulkInquiryContext";
 import { useCart } from "@/contexts/CartContext";
+import { useProtectedAction } from "@/hooks/useProtectedAction";
 import {
   HiOutlineShieldCheck,
   HiOutlineTruck,
@@ -102,6 +103,7 @@ export default function AdvancedProductDetailPage({
 }: Props) {
   const { addItem: addToCompare, removeItem: removeFromCompare, isInCompare } = useCompare();
   const { addItem: addToBulk, removeItem: removeFromBulk, isInBulk } = useBulkInquiry();
+  const protect = useProtectedAction();
 
   // 🔍 DEBUG: Log initial product data
   useEffect(() => {
@@ -2023,18 +2025,20 @@ export default function AdvancedProductDetailPage({
                 <div className="px-4 py-3 space-y-2">
                   {/* Start Chat Button */}
                   {product.seller.id && (
-                    <Link
-                      href={`/chat?sellerId=${product.seller.id}&sellerName=${encodeURIComponent(product.seller.companyName || product.seller.name || '')}&productId=${product.id}`}
+                    <button
+                      onClick={() => protect(() => {
+                        window.location.href = `/chat?sellerId=${product.seller.id}&sellerName=${encodeURIComponent(product.seller.companyName || product.seller.name || '')}&productId=${product.id}`;
+                      })}
                       className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm"
                     >
                       <HiOutlineEnvelope className="w-4 h-4" />
                       Start Chat
-                    </Link>
+                    </button>
                   )}
 
                   {/* WhatsApp Button */}
                   <button
-                    onClick={() => {
+                    onClick={() => protect(() => {
                       const rawPhone = (product.seller as any).phone
                         ? String((product.seller as any).phone).replace(/\D/g, "")
                         : "";
@@ -2047,10 +2051,8 @@ export default function AdvancedProductDetailPage({
                         return;
                       }
 
-                      // Ensure +91 country code
                       const phone = rawPhone.startsWith("91") ? rawPhone : "91" + rawPhone;
 
-                      // Validate: Indian number = 91 + 10 digits = 12 digits total
                       if (phone.length !== 12) {
                         toast.error("Seller's phone number appears invalid. Please use Send Inquiry.");
                         return;
@@ -2060,10 +2062,9 @@ export default function AdvancedProductDetailPage({
                       const price = selectedVariant?.price ?? (product as any).price ?? "";
                       const msg = `Hello,\n\nI am interested in your product:\n*Product Name:* ${product.name}\n*Product ID:* ${product.id}${price ? `\n*Price:* ₹${price}` : ""}\n\nPlease share more details.\n\nThank you,\n${sellerName}`;
 
-                      // Mobile: wa.me opens WhatsApp app; Desktop: wa.me opens WhatsApp Web
                       const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
                       window.open(url, "_blank", "noopener,noreferrer");
-                    }}
+                    })}
                     className="w-full py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 active:scale-95 transition flex items-center justify-center gap-2 text-sm"
                   >
                     <HiOutlinePhone className="w-4 h-4" />
@@ -2072,7 +2073,7 @@ export default function AdvancedProductDetailPage({
 
                   {/* Send Inquiry Button */}
                   <button
-                    onClick={() => setIsInquiryModalOpen(true)}
+                    onClick={() => protect(() => setIsInquiryModalOpen(true))}
                     className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 active:scale-95 transition flex items-center justify-center gap-2 text-sm"
                   >
                     <HiOutlinePaperAirplane className="w-4 h-4" />

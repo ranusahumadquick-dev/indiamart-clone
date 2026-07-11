@@ -18,6 +18,8 @@ import { HiMiniShieldCheck } from "react-icons/hi2";
 import WishlistButton from "./WishlistButton";
 import { useCompare } from "@/contexts/CompareContext";
 import { useBulkInquiry } from "@/contexts/BulkInquiryContext";
+import { useProtectedAction } from "@/hooks/useProtectedAction";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -150,6 +152,8 @@ const ProductCard = ({
   const inCompare = isInCompare(_id);
   const inBulk = isInBulk(_id);
   const [showTrust, setShowTrust] = useState(false);
+  const protect = useProtectedAction();
+  const router = useRouter();
 
   const discount = comparePrice && comparePrice > price
     ? Math.round(((comparePrice - price) / comparePrice) * 100) : 0;
@@ -304,19 +308,19 @@ const ProductCard = ({
 
           {/* Buttons */}
           <div className="flex gap-2 mt-0.5">
-            <Link
-              href={`/products/${_id}`}
+            <button
+              onClick={() => protect(() => router.push(`/products/${_id}`))}
               className="flex-1 text-center text-[12px] font-semibold text-blue-600 border-2 border-blue-600 rounded-xl py-2 hover:bg-blue-600 hover:text-white transition-all duration-200"
             >
               View Details
-            </Link>
-            <Link
-              href={`/products/${_id}#inquiry`}
+            </button>
+            <button
+              onClick={() => protect(() => router.push(`/products/${_id}#inquiry`))}
               className="flex-1 flex items-center justify-center gap-1 text-[12px] font-semibold text-white bg-orange-500 hover:bg-orange-600 active:scale-95 rounded-xl py-2 transition-all duration-200"
             >
               <HiOutlineChatBubbleLeftRight className="w-3.5 h-3.5 shrink-0" />
               Contact Seller
-            </Link>
+            </button>
           </div>
         </div>
       </div>

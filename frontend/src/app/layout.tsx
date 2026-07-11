@@ -14,6 +14,8 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import ChatWidget from "@/components/chat/ChatWidget";
 import CompareBar from "@/components/ui/CompareBar";
 import BulkInquiryBar from "@/components/ui/BulkInquiryBar";
+import { GuestVerifyProvider } from "@/contexts/GuestVerifyContext";
+import MobileOTPModal from "@/components/MobileOTPModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,26 +44,29 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col bg-gray-50">
         <AuthProvider>
-          <ChatProvider>
-            <PaymentProvider>
-              <CompareProvider>
-                <CartProvider>
-                  <BulkInquiryProvider>
-                    <ToastProvider />
-                    <ConditionalLayout
-                      navbar={<Navbar />}
-                      footer={<Footer />}
-                    >
-                      <main className="flex-1 pb-0">{children}</main>
-                      <ChatWidget />
-                      <CompareBar />
-                      <BulkInquiryBar />
-                    </ConditionalLayout>
-                  </BulkInquiryProvider>
-                </CartProvider>
-              </CompareProvider>
-            </PaymentProvider>
-          </ChatProvider>
+          <GuestVerifyProvider>
+            <ChatProvider>
+              <PaymentProvider>
+                <CompareProvider>
+                  <CartProvider>
+                    <BulkInquiryProvider>
+                      <ToastProvider />
+                      <ConditionalLayout
+                        navbar={<Navbar />}
+                        footer={<Footer />}
+                      >
+                        <main className="flex-1 pb-0">{children}</main>
+                        <ChatWidget />
+                        <CompareBar />
+                        <BulkInquiryBar />
+                      </ConditionalLayout>
+                      <MobileOTPModal />
+                    </BulkInquiryProvider>
+                  </CartProvider>
+                </CompareProvider>
+              </PaymentProvider>
+            </ChatProvider>
+          </GuestVerifyProvider>
         </AuthProvider>
       </body>
     </html>

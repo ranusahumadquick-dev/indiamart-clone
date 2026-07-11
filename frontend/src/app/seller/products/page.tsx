@@ -100,6 +100,21 @@ function ProductsContent() {
     }
   };
 
+  const [publishing, setPublishing] = useState<string | null>(null);
+
+  const handlePublish = async (product: Product) => {
+    setPublishing(product._id);
+    try {
+      await api.put(`/products/${product._id}`, { status: "approved", isActive: true });
+      toast.success(`"${product.name}" published! Now visible to buyers.`);
+      fetchProducts(currentPage);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to publish product");
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   const handleToggleActive = async (product: Product) => {
     try {
       await api.put(`/products/${product._id}`, {
@@ -365,6 +380,21 @@ function ProductsContent() {
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Publish button — only for non-approved products */}
+                        {(product.status !== "approved" || !product.isActive) && (
+                          <button
+                            onClick={() => handlePublish(product)}
+                            disabled={publishing === product._id}
+                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-1"
+                            title="Publish product"
+                          >
+                            {publishing === product._id ? (
+                              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              "🚀 Publish"
+                            )}
+                          </button>
+                        )}
                         <Link
                           href={`/seller/products/${product._id}/edit`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -446,6 +476,15 @@ function ProductsContent() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
+                    {(product.status !== "approved" || !product.isActive) && (
+                      <button
+                        onClick={() => handlePublish(product)}
+                        disabled={publishing === product._id}
+                        className="px-2 py-1 bg-green-600 text-white text-[10px] font-semibold rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {publishing === product._id ? "..." : "🚀 Publish"}
+                      </button>
+                    )}
                     <Link
                       href={`/seller/products/${product._id}/edit`}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"

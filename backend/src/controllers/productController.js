@@ -374,6 +374,11 @@ const getSingleProduct = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Product not found");
   }
 
+  // Block access to non-approved products from public detail page
+  if (product.status !== "approved" || !product.isActive) {
+    throw new ApiError(404, "Product not available");
+  }
+
   console.log("🔍 [getSingleProduct] Fetched product:", product.name);
   console.log("   Has Variants:", product.hasVariants);
   console.log("   Variant Types Count:", product.variantTypes?.length || 0);
@@ -570,6 +575,36 @@ const updateProduct = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(200, updatedProduct, "Product updated successfully")
     );
+});
+
+// =============================================
+// 🔍 GET SELLER'S OWN PRODUCT — for edit page (no status restriction)
+// =============================================
+const getSellerSingleProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const product = await Product.findOne({ _id: id, seller: req.user._id })
+    .populate("category", "name slug")
+    .populate("subCategory", "name slug")
+    .populate("seller", "name companyName city state isVerified avatar avgResponseTime phone whatsapp")
+    .populate("brand", "brandName logo website");
+
+  if (!product) {
+    throw new ApiError(404, "Product not found or you don't have permission");
+  }
+
+  let transformedProduct = product.toObject ? product.toObject() : JSON.parse(JSON.stringify(product));
+
+  if (transformedProduct.variants && Array.isArray(transformedProduct.variants)) {
+    transformedProduct.variants = transformedProduct.variants.map((v, idx) => {
+      const attributeValues = v.attributeValues instanceof Map
+        ? Object.fromEntries(v.attributeValues)
+        : (v.attributeValues || {});
+      return { ...v, attributeValues, id: v.sku || `variant-${idx}` };
+    });
+  }
+
+  return res.status(200).json(new ApiResponse(200, transformedProduct, "Product fetched successfully"));
 });
 
 // =============================================
@@ -1033,6 +1068,7 @@ export {
   createProduct,
   getAllProducts,
   getSingleProduct,
+  getSellerSingleProduct,
   updateProduct,
   deleteProduct,
   getSellerProducts,

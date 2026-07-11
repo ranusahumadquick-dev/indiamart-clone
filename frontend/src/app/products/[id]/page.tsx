@@ -276,10 +276,14 @@ export default function ProductDetailPage() {
           category: typeof p.category === "string" ? p.category : p.category?.name,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching product:", error);
-      // Fallback to dummy data for demo
-      setProduct(DUMMY_DETAIL);
+      const status = error?.response?.status;
+      if (status === 404) {
+        setProduct(null);
+      } else {
+        setProduct(DUMMY_DETAIL);
+      }
       setRelated([]);
     } finally {
       setLoading(false);

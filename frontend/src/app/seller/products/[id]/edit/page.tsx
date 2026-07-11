@@ -145,7 +145,7 @@ function EditProductContent() {
     const fetchData = async () => {
       try {
         const [productRes, catRes, brandRes] = await Promise.all([
-          api.get(`/products/${productId}`),
+          api.get(`/products/seller/product/${productId}`),
           api.get("/categories"),
           api.get("/brands/my").catch(() => ({ data: { data: { brands: [] } } })),
         ]);

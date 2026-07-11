@@ -3,6 +3,7 @@ import {
   createProduct,
   getAllProducts,
   getSingleProduct,
+  getSellerSingleProduct,
   updateProduct,
   deleteProduct,
   getSellerProducts,
@@ -27,6 +28,7 @@ router.get("/", getAllProducts);
 router.get("/search", searchProducts);
 router.get("/related/:productId", getRelatedProducts);
 router.get("/featured", getFeaturedProducts);
+router.get("/seller/product/:id", authMiddleware, roleMiddleware("seller"), getSellerSingleProduct);
 router.get("/:id", getSingleProduct);
 
 // ─── Add Rice Variants (Variety, Packaging, Processing) ───

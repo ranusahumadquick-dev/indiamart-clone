@@ -177,7 +177,8 @@ function scoreProduct(product: Product, queryTokens: string[], rawQuery: string)
 // Server handles all filters (category, price, MOQ, rating, isVerified, allowSamples).
 // Client only applies: search relevance scoring, location (city+state), and sort order.
 function applyClientFilters(products: Product[], filters: Filters): Product[] {
-  let result = [...products];
+  // Safety net: never show non-approved or inactive products on client side
+  let result = products.filter((p: any) => p.status === "approved" && p.isActive !== false);
 
   // Search relevance scoring (server does text search; client re-ranks by score)
   if (filters.search.trim()) {

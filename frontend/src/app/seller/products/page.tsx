@@ -115,6 +115,19 @@ function ProductsContent() {
     }
   };
 
+  const handleDraft = async (product: Product) => {
+    setPublishing(product._id);
+    try {
+      await api.put(`/products/${product._id}`, { status: "pending", isActive: false });
+      toast.success(`"${product.name}" moved to draft.`);
+      fetchProducts(currentPage);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to unpublish product");
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   const handleToggleActive = async (product: Product) => {
     try {
       await api.put(`/products/${product._id}`, {
@@ -380,8 +393,20 @@ function ProductsContent() {
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Publish button — only for non-approved products */}
-                        {(product.status !== "approved" || !product.isActive) && (
+                        {product.status === "approved" && product.isActive ? (
+                          /* Draft button — for published products */
+                          <button
+                            onClick={() => handleDraft(product)}
+                            disabled={publishing === product._id}
+                            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-200 transition disabled:opacity-50 flex items-center gap-1"
+                            title="Move to draft"
+                          >
+                            {publishing === product._id ? (
+                              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                            ) : "📄 Draft"}
+                          </button>
+                        ) : (
+                          /* Publish button — for pending/draft/inactive products */
                           <button
                             onClick={() => handlePublish(product)}
                             disabled={publishing === product._id}
@@ -390,9 +415,7 @@ function ProductsContent() {
                           >
                             {publishing === product._id ? (
                               <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              "🚀 Publish"
-                            )}
+                            ) : "🚀 Publish"}
                           </button>
                         )}
                         <Link
@@ -476,7 +499,15 @@ function ProductsContent() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {(product.status !== "approved" || !product.isActive) && (
+                    {product.status === "approved" && product.isActive ? (
+                      <button
+                        onClick={() => handleDraft(product)}
+                        disabled={publishing === product._id}
+                        className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+                      >
+                        {publishing === product._id ? "..." : "📄 Draft"}
+                      </button>
+                    ) : (
                       <button
                         onClick={() => handlePublish(product)}
                         disabled={publishing === product._id}

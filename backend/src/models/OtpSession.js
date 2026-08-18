@@ -26,7 +26,7 @@ const otpSessionSchema = new mongoose.Schema(
 
     provider: {
       type: String,
-      enum: ["msg91", "fast2sms", "dev", "none"],
+      enum: ["msg91", "fast2sms", "dev", "none", "gmail"],
       default: "none",
     },
   },

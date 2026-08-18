@@ -480,9 +480,6 @@ const updateProduct = asyncHandler(async (req, res) => {
     if (req.user.accountFrozen) {
       throw new ApiError(403, "Your account has been frozen by admin. Contact support to resume publishing.");
     }
-    if (req.user.sellerStatus !== "approved") {
-      throw new ApiError(403, "Complete seller verification before publishing products live");
-    }
   }
 
   // Validate brand belongs to seller if provided

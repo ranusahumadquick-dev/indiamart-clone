@@ -178,8 +178,8 @@ const createProduct = asyncHandler(async (req, res) => {
     hasVariants: parsedVariants.length > 0,
   });
 
-  // If no variants provided, populate categories and trigger auto-generation
-  if ((!parsedVariantTypes || parsedVariantTypes.length === 0) && category) {
+  // If variantTypes provided but no variants yet, trigger auto-generation
+  if (category) {
     console.log("🔄 [Auto-Variants] Re-fetching product to populate category for auto-variant generation...");
     product = await Product.findById(product._id)
       .populate("category")

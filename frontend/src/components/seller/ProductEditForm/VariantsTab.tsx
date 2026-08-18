@@ -210,7 +210,7 @@ export const VariantsTab: React.FC<VariantsTabProps> = ({
         return;
       }
 
-      if (!baseStock || baseStock <= 0) {
+      if (baseStock === undefined || baseStock === null) {
         toast.error("Product stock must be greater than 0");
         return;
       }
